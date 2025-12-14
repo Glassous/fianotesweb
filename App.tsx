@@ -148,6 +148,7 @@ const MainLayout: React.FC = () => {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     return (localStorage.getItem("theme") as ThemeMode) || "system";
   });
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -156,6 +157,7 @@ const MainLayout: React.FC = () => {
     const applyTheme = (mode: ThemeMode) => {
       const isDark =
         mode === "dark" || (mode === "system" && systemQuery.matches);
+      setIsDarkMode(isDark);
       if (isDark) {
         root.classList.add("dark");
       } else {
@@ -426,7 +428,7 @@ const MainLayout: React.FC = () => {
             <div className="w-full min-h-full">
               {/* Note: max-w-none is handled in MarkdownRenderer, removing container constraints here allows full width */}
               <div className="mx-auto w-full">
-                <MarkdownRenderer content={currentNote.content} />
+                <MarkdownRenderer content={currentNote.content} isDark={isDarkMode} />
               </div>
 
               {/* Footer Metadata in Document Flow */}
