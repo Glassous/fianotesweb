@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   HashRouter,
   Routes,
@@ -108,6 +108,7 @@ const MainLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoverOpen, setHoverOpen] = useState(false); // For edge hover
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   // Data State
   const [notesData, setNotesData] = useState<RawNoteFile[]>([]);
@@ -259,6 +260,13 @@ const MainLayout: React.FC = () => {
         .finally(() => setContentLoading(false));
     }
   }, [activeFilePath, notesData]); // Note: This dependency array is safe because we check !note.content
+
+  // Effect: Scroll to top when file changes
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+  }, [activeFilePath]);
 
   // Word count calculation
   const wordCount = useMemo(() => {
@@ -423,7 +431,10 @@ const MainLayout: React.FC = () => {
         </header>
 
         {/* Scrollable Document Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-zinc-950 scroll-smooth transition-colors duration-200">
+        <main
+          ref={mainContentRef}
+          className="flex-1 overflow-y-auto bg-gray-50 dark:bg-zinc-950 scroll-smooth transition-colors duration-200"
+        >
           {currentNote?.content ? (
             <div className="w-full min-h-full">
               {/* Note: max-w-none is handled in MarkdownRenderer, removing container constraints here allows full width */}
