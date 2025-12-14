@@ -29,6 +29,7 @@ export const buildFileTree = (rawFiles: RawNoteFile[]): FolderItem => {
           type: "file",
           content: file.content,
           metadata: file.metadata,
+          sha: file.sha,
         };
         currentLevel.push(noteNode);
       } else {

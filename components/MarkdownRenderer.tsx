@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
+import "github-markdown-css/github-markdown-light.css";
 
 interface MarkdownRendererProps {
   content: string;
@@ -95,7 +96,7 @@ const PreBlock = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="my-6 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-[#0d1117] shadow-sm">
+    <div className="my-6 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0d1117] shadow-sm max-w-full">
       {/* Code Header */}
       <div
         className="flex items-center justify-between px-4 py-2 bg-zinc-100 dark:bg-[#161b22] border-b border-zinc-200 dark:border-zinc-800 select-none cursor-pointer"
@@ -129,9 +130,9 @@ const PreBlock = ({ children }: { children: React.ReactNode }) => {
       <div
         className={`transition-all duration-300 ease-in-out ${isCollapsed ? "max-h-0 opacity-0" : "max-h-[2000px] opacity-100"}`}
       >
-        <div className="relative overflow-x-auto">
+        <div className="relative w-full">
           {/* We use a span wrapper to apply the pre styles without nesting another pre */}
-          <pre className="!m-0 !p-4 !bg-transparent !border-none custom-scrollbar">
+          <pre className="!m-0 !p-4 !bg-transparent !border-none custom-scrollbar overflow-x-auto w-full">
             {children}
           </pre>
         </div>
@@ -145,12 +146,232 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 }) => {
   return (
     // Updated colors to Zinc (black-gray)
-    <div className="prose prose-zinc dark:prose-invert max-w-none prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-pre:m-0 prose-pre:p-0 prose-pre:bg-transparent p-8 bg-white dark:bg-zinc-950 shadow-sm min-h-screen transition-colors duration-200">
+    // Removed 'prose' (Tailwind Typography) and added 'markdown-body' (GitHub Markdown CSS)
+    <div className="markdown-body p-8 bg-white dark:bg-zinc-950 min-h-screen transition-colors duration-200 text-zinc-900 dark:text-zinc-100">
+      <style>{`
+        .markdown-body {
+          background-color: transparent !important;
+          font-family: inherit;
+        }
+        
+        /* Ensure PreBlock scrolls horizontally */
+        .markdown-body pre {
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        /* Dark mode overrides for markdown-body */
+        .dark .markdown-body {
+          color-scheme: dark;
+          color: #e4e4e7; /* zinc-200 */
+        }
+
+        .dark .markdown-body h1,
+        .dark .markdown-body h2,
+        .dark .markdown-body h3,
+        .dark .markdown-body h4,
+        .dark .markdown-body h5,
+        .dark .markdown-body h6 {
+          color: #f4f4f5; /* zinc-100 */
+          border-bottom-color: #3f3f46; /* zinc-700 */
+        }
+
+        .dark .markdown-body a {
+          color: #60a5fa; /* blue-400 */
+        }
+        
+        .dark .markdown-body blockquote {
+          color: #a1a1aa; /* zinc-400 */
+          border-left-color: #3f3f46;
+        }
+        
+        .dark .markdown-body hr {
+          background-color: #3f3f46;
+          height: 1px;
+        }
+        
+        /* Table overrides */
+        .dark .markdown-body table tr {
+          background-color: transparent;
+          border-color: #3f3f46;
+        }
+        .dark .markdown-body table tr:nth-child(2n) {
+          background-color: rgba(63, 63, 70, 0.2);
+        }
+        .dark .markdown-body table th,
+        .dark .markdown-body table td {
+          border-color: #3f3f46;
+        }
+        
+        /* Inline code override */
+        .dark .markdown-body code:not([class*="language-"]) {
+          background-color: rgba(63, 63, 70, 0.4);
+          color: #e4e4e7;
+        }
+
+        /* --- Syntax Highlighting: GitHub Light (Default) --- */
+        .hljs {
+          color: #24292e;
+          background: #ffffff
+        }
+        .hljs-doctag,
+        .hljs-keyword,
+        .hljs-meta .hljs-keyword,
+        .hljs-template-tag,
+        .hljs-template-variable,
+        .hljs-type,
+        .hljs-variable.language_ {
+          color: #d73a49
+        }
+        .hljs-title,
+        .hljs-title.class_,
+        .hljs-title.class_.inherited__,
+        .hljs-title.function_ {
+          color: #6f42c1
+        }
+        .hljs-attr,
+        .hljs-attribute,
+        .hljs-literal,
+        .hljs-meta,
+        .hljs-number,
+        .hljs-operator,
+        .hljs-variable,
+        .hljs-selector-attr,
+        .hljs-selector-class,
+        .hljs-selector-id {
+          color: #005cc5
+        }
+        .hljs-regexp,
+        .hljs-string,
+        .hljs-meta .hljs-string {
+          color: #032f62
+        }
+        .hljs-built_in,
+        .hljs-symbol {
+          color: #e36209
+        }
+        .hljs-comment,
+        .hljs-code,
+        .hljs-formula {
+          color: #6a737d
+        }
+        .hljs-name,
+        .hljs-quote,
+        .hljs-selector-tag,
+        .hljs-selector-pseudo {
+          color: #22863a
+        }
+        .hljs-subst {
+          color: #24292e
+        }
+        .hljs-section {
+          color: #005cc5;
+          font-weight: bold
+        }
+        .hljs-bullet {
+          color: #735c0f
+        }
+        .hljs-emphasis {
+          color: #24292e;
+          font-style: italic
+        }
+        .hljs-strong {
+          color: #24292e;
+          font-weight: bold
+        }
+        .hljs-addition {
+          color: #22863a;
+          background-color: #f0fff4
+        }
+        .hljs-deletion {
+          color: #b31d28;
+          background-color: #ffeef0
+        }
+
+        /* --- Syntax Highlighting: GitHub Dark (Override) --- */
+        .dark .hljs {
+          color: #c9d1d9;
+          background: #0d1117
+        }
+        .dark .hljs-doctag,
+        .dark .hljs-keyword,
+        .dark .hljs-meta .hljs-keyword,
+        .dark .hljs-template-tag,
+        .dark .hljs-template-variable,
+        .dark .hljs-type,
+        .dark .hljs-variable.language_ {
+          color: #ff7b72
+        }
+        .dark .hljs-title,
+        .dark .hljs-title.class_,
+        .dark .hljs-title.class_.inherited__,
+        .dark .hljs-title.function_ {
+          color: #d2a8ff
+        }
+        .dark .hljs-attr,
+        .dark .hljs-attribute,
+        .dark .hljs-literal,
+        .dark .hljs-meta,
+        .dark .hljs-number,
+        .dark .hljs-operator,
+        .dark .hljs-variable,
+        .dark .hljs-selector-attr,
+        .dark .hljs-selector-class,
+        .dark .hljs-selector-id {
+          color: #79c0ff
+        }
+        .dark .hljs-regexp,
+        .dark .hljs-string,
+        .dark .hljs-meta .hljs-string {
+          color: #a5d6ff
+        }
+        .dark .hljs-built_in,
+        .dark .hljs-symbol {
+          color: #ffa657
+        }
+        .dark .hljs-comment,
+        .dark .hljs-code,
+        .dark .hljs-formula {
+          color: #8b949e
+        }
+        .dark .hljs-name,
+        .dark .hljs-quote,
+        .dark .hljs-selector-tag,
+        .dark .hljs-selector-pseudo {
+          color: #7ee787
+        }
+        .dark .hljs-subst {
+          color: #c9d1d9
+        }
+        .dark .hljs-section {
+          color: #1f6feb;
+          font-weight: bold
+        }
+        .dark .hljs-bullet {
+          color: #f2cc60
+        }
+        .dark .hljs-emphasis {
+          color: #c9d1d9;
+          font-style: italic
+        }
+        .dark .hljs-strong {
+          color: #c9d1d9;
+          font-weight: bold
+        }
+        .dark .hljs-addition {
+          color: #aff5b4;
+          background-color: #033a16
+        }
+        .dark .hljs-deletion {
+          color: #ffdcd7;
+          background-color: #67060c
+        }
+      `}</style>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeHighlight]}
+        rehypePlugins={[rehypeKatex, [rehypeHighlight, { detect: true }]]}
         components={{
-          pre: PreBlock,
+          pre: ({ children, ...props }) => <PreBlock {...props}>{children}</PreBlock>,
         }}
       >
         {content}

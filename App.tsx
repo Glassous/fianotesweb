@@ -10,18 +10,10 @@ import {
 import { Sidebar } from "./components/Sidebar";
 import { MarkdownRenderer } from "./components/MarkdownRenderer";
 import { buildFileTree } from "./utils/transform";
+import { parseFrontmatter } from "./utils/frontmatter";
 import { MOCK_NOTES } from "./constants";
 import { RawNoteFile, NoteItem } from "./types";
-
-// Mock Data Loader (Keep existing logic)
-let productionNotes: RawNoteFile[] = [];
-try {
-  // @ts-ignore
-  // const data = require('./data/notes-data.json');
-  // productionNotes = data;
-} catch (e) {}
-
-const sourceData = productionNotes.length > 0 ? productionNotes : MOCK_NOTES;
+import { fetchNotesTree, fetchNoteContent, isGitHubConfigured } from "./services/github";
 
 // --- Icons ---
 const MenuIcon = () => (
@@ -36,6 +28,22 @@ const MenuIcon = () => (
       strokeLinejoin="round"
       strokeWidth={2}
       d="M4 6h16M4 12h16M4 18h16"
+    />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg
+    className="w-6 h-6 text-zinc-600 dark:text-zinc-300"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M6 18L18 6M6 6l12 12"
     />
   </svg>
 );
@@ -101,6 +109,41 @@ const MainLayout: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoverOpen, setHoverOpen] = useState(false); // For edge hover
 
+  // Data State
+  const [notesData, setNotesData] = useState<RawNoteFile[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initial Load
+  const loadNotes = async () => {
+    if (isGitHubConfigured()) {
+      setIsLoading(true);
+      try {
+        const tree = await fetchNotesTree();
+        const rawFiles: RawNoteFile[] = tree.map((item) => ({
+          filePath: item.path,
+          sha: item.sha,
+          blobUrl: item.url,
+          content: undefined,
+          metadata: undefined,
+        }));
+        setNotesData(rawFiles);
+      } catch (err: any) {
+        console.error("Failed to fetch notes tree:", err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setNotesData(MOCK_NOTES);
+    }
+  };
+
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
   // --- Theme State & Logic ---
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     return (localStorage.getItem("theme") as ThemeMode) || "system";
@@ -157,12 +200,17 @@ const MainLayout: React.FC = () => {
     if (isMobile) setIsSidebarOpen(false);
   }, [location.pathname, isMobile]);
 
-  const fileTree = useMemo(() => buildFileTree(sourceData), []);
+  const fileTree = useMemo(() => buildFileTree(notesData), [notesData]);
 
   // Fix: Extract actual file path from route parameter
   // The route is usually /note/some/file.md, so rawPath is "note/some/file.md"
   // We need to strip the "note/" prefix to match the ID in sourceData
   const activeFilePath = useMemo(() => {
+    // Only use rawPath if we are NOT in the initial load state where we want to clear selection
+    // But since the requirement is "don't save state", we can just ignore the URL on mount?
+    // Actually, "refresh should not open any file" implies we shouldn't sync URL to state on mount,
+    // OR we should clear the URL on mount.
+    
     if (!rawPath) return null;
     const decoded = decodeURIComponent(rawPath);
     return decoded.startsWith("note/")
@@ -170,10 +218,45 @@ const MainLayout: React.FC = () => {
       : decoded;
   }, [rawPath]);
 
+  // Effect: On Mount, if there is a path, clear it.
+  useEffect(() => {
+    if (location.pathname !== "/") {
+      navigate("/", { replace: true });
+    }
+  }, []); // Run once on mount
+
   const currentNote = useMemo(() => {
     if (!activeFilePath) return null;
-    return sourceData.find((n) => n.filePath === activeFilePath);
-  }, [activeFilePath]);
+    return notesData.find((n) => n.filePath === activeFilePath);
+  }, [activeFilePath, notesData]);
+
+  // Lazy Load Content
+  useEffect(() => {
+    if (!activeFilePath || !notesData.length) return;
+
+    const note = notesData.find((n) => n.filePath === activeFilePath);
+    // If we have a note but no content, and it has a blobUrl (implies GitHub mode)
+    if (note && !note.content && note.blobUrl && !contentLoading) {
+      setContentLoading(true);
+      fetchNoteContent(note.blobUrl)
+         .then((content) => {
+           // Parse Frontmatter
+           const { data, content: mdContent } = parseFrontmatter(content);
+
+           setNotesData((prev) =>
+            prev.map((n) =>
+              n.filePath === activeFilePath
+                ? { ...n, content: mdContent, metadata: data }
+                : n,
+            ),
+          );
+        })
+        .catch((err) => {
+          console.error("Failed to load content", err);
+        })
+        .finally(() => setContentLoading(false));
+    }
+  }, [activeFilePath, notesData]); // Note: This dependency array is safe because we check !note.content
 
   // Word count calculation
   const wordCount = useMemo(() => {
@@ -222,7 +305,7 @@ const MainLayout: React.FC = () => {
               FiaNotes
             </h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Knowledge Base
+              {isLoading ? "Loading..." : "Knowledge Base"}
             </p>
           </div>
           {/* Close button for Mobile/Hover state */}
@@ -232,7 +315,7 @@ const MainLayout: React.FC = () => {
                 setIsSidebarOpen(false);
                 setHoverOpen(false);
               }}
-              className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+              className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded md:hidden"
             >
               <svg
                 className="w-5 h-5 text-zinc-400"
@@ -252,10 +335,17 @@ const MainLayout: React.FC = () => {
         </div>
 
         {/* Render New Sidebar Component */}
+        {error && (
+          <div className="p-4 text-sm text-red-500 bg-red-50 dark:bg-red-900/10 border-b border-red-100 dark:border-red-900/20">
+            Error: {error}
+          </div>
+        )}
         <Sidebar
           rootNode={fileTree}
           onSelect={handleSelectNote}
           selectedId={activeFilePath || ""}
+          isLoading={isLoading}
+          onRefresh={loadNotes}
         />
       </aside>
 
@@ -280,9 +370,9 @@ const MainLayout: React.FC = () => {
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 mr-4 -ml-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 focus:outline-none transition-colors"
-              title="Toggle Sidebar"
+              title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
             >
-              <MenuIcon />
+              {isSidebarOpen ? <CloseIcon /> : <MenuIcon />}
             </button>
 
             {currentNote ? (
@@ -332,7 +422,7 @@ const MainLayout: React.FC = () => {
 
         {/* Scrollable Document Content */}
         <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-zinc-950 scroll-smooth transition-colors duration-200">
-          {currentNote ? (
+          {currentNote?.content ? (
             <div className="w-full min-h-full">
               {/* Note: max-w-none is handled in MarkdownRenderer, removing container constraints here allows full width */}
               <div className="mx-auto w-full">
@@ -351,6 +441,19 @@ const MainLayout: React.FC = () => {
                     </span>
                   ))}
                 </div>
+              </div>
+            </div>
+          ) : contentLoading ? (
+            <div className="p-8 max-w-4xl mx-auto space-y-8 mt-8">
+              <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4 animate-pulse"></div>
+              <div className="space-y-3">
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-5/6 animate-pulse"></div>
+              </div>
+              <div className="space-y-3 pt-4">
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
+                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-4/6 animate-pulse"></div>
               </div>
             </div>
           ) : (
