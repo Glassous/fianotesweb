@@ -33,3 +33,11 @@ export interface RawNoteFile {
   sha?: string;
   blobUrl?: string;
 }
+
+export interface OutlineItem {
+  id: string;
+  text: string;
+  level: number;
+  line: number;
+  children: OutlineItem[];
+}

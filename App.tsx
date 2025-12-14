@@ -9,10 +9,10 @@ import {
 } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { MarkdownRenderer } from "./components/MarkdownRenderer";
-import { buildFileTree } from "./utils/transform";
+import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
 import { MOCK_NOTES } from "./constants";
-import { RawNoteFile, NoteItem } from "./types";
+import { RawNoteFile, NoteItem, OutlineItem } from "./types";
 import { fetchNotesTree, fetchNoteContent, isGitHubConfigured } from "./services/github";
 
 // --- Icons ---
@@ -115,6 +115,10 @@ const MainLayout: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Outline State
+  const [sidebarTab, setSidebarTab] = useState<"files" | "outline">("files");
+  const [outlineItems, setOutlineItems] = useState<OutlineItem[]>([]);
 
   // Initial Load
   const loadNotes = async () => {
@@ -233,6 +237,45 @@ const MainLayout: React.FC = () => {
     return notesData.find((n) => n.filePath === activeFilePath);
   }, [activeFilePath, notesData]);
 
+  // Effect: Update outline when note content changes
+  useEffect(() => {
+    if (currentNote && currentNote.content && currentNote.filePath.endsWith(".md")) {
+      const headings = extractHeadings(currentNote.content);
+      setOutlineItems(headings);
+      // Auto-switch to outline tab when opening/loading a markdown file
+      setSidebarTab("outline");
+    } else {
+      setOutlineItems([]);
+      // Switch back to files if no valid markdown file is active
+      setSidebarTab("files");
+    }
+  }, [currentNote]);
+
+  const handleHeadingClick = (id: string) => {
+    const element = document.getElementById(id);
+    const container = mainContentRef.current;
+
+    if (element && container) {
+      // Calculate position relative to the scroll container
+      // We use getBoundingClientRect to get precise positions relative to the viewport
+      // regardless of nesting, then calculate the difference.
+      const elementRect = element.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      // Current scroll position
+      const currentScroll = container.scrollTop;
+      
+      // Target position: Current Scroll + (Element Top - Container Top) - Offset
+      // The offset (e.g. 24px) gives a bit of breathing room at the top
+      const targetTop = currentScroll + (elementRect.top - containerRect.top) - 24;
+
+      container.scrollTo({
+        top: targetTop,
+        behavior: "smooth",
+      });
+    }
+  };
+
   // Lazy Load Content
   useEffect(() => {
     if (!activeFilePath || !notesData.length) return;
@@ -283,7 +326,8 @@ const MainLayout: React.FC = () => {
   const sidebarVisible = isSidebarOpen || hoverOpen;
 
   return (
-    <div className="flex h-screen w-full bg-gray-50 dark:bg-zinc-950 overflow-hidden relative transition-colors duration-200">
+    // Root container: Uses 100dvh to fix viewport height on mobile, hidden overflow to prevent body scroll
+    <div className="h-[100dvh] w-screen bg-gray-50 dark:bg-zinc-950 overflow-hidden flex flex-row relative transition-colors duration-200">
       {/* 1. Edge Hover Sensor (Desktop only, when closed) */}
       {!isSidebarOpen && !isMobile && (
         <div
@@ -295,8 +339,13 @@ const MainLayout: React.FC = () => {
       {/* 2. Sidebar Container */}
       <aside
         className={`
-          fixed md:relative z-40 h-full bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col
+          flex-none h-full bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-40
           transition-[width,transform,background-color] duration-300 ease-in-out
+          ${
+            isMobile
+              ? "fixed inset-y-0 left-0" // Fixed on mobile
+              : "relative" // Relative flow on desktop
+          }
           ${
             isMobile
               ? isSidebarOpen
@@ -350,13 +399,22 @@ const MainLayout: React.FC = () => {
             Error: {error}
           </div>
         )}
-        <Sidebar
-          rootNode={fileTree}
-          onSelect={handleSelectNote}
-          selectedId={activeFilePath || ""}
-          isLoading={isLoading}
-          onRefresh={loadNotes}
-        />
+        
+        {/* Sidebar Content Wrapper - Crucial for scrolling */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Sidebar
+            rootNode={fileTree}
+            onSelect={handleSelectNote}
+            selectedId={activeFilePath || ""}
+            isLoading={isLoading}
+            onRefresh={loadNotes}
+            outlineItems={outlineItems}
+            showOutline={!!(currentNote && currentNote.filePath.endsWith(".md"))}
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+            onHeadingClick={handleHeadingClick}
+          />
+        </div>
       </aside>
 
       {/* 3. Mobile Overlay Backdrop */}
@@ -370,7 +428,7 @@ const MainLayout: React.FC = () => {
       {/* 4. Main Content Area */}
       <div
         className={`
-        flex-1 flex flex-col h-full overflow-hidden transition-all duration-300
+        flex-1 h-full min-w-0 flex flex-col transition-all duration-300 relative
         ${isMobile && isSidebarOpen ? "blur-sm scale-[0.98] pointer-events-none select-none" : ""}
       `}
       >

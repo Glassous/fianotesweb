@@ -157,6 +157,31 @@ const PreBlock = ({ children, isDark }: { children: React.ReactNode; isDark: boo
   );
 };
 
+// --- Heading Helper ---
+const slugify = (text: string) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s\u4e00-\u9fa5-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
+const getNodeText = (node: any): string => {
+  if (node == null) return "";
+  if (['string', 'number'].includes(typeof node)) return node.toString();
+  if (node instanceof Array) return node.map(getNodeText).join('');
+  if (typeof node === 'object' && node.props) return getNodeText(node.props.children);
+  return "";
+};
+
+const Heading = ({ level, children, ...props }: any) => {
+  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const text = getNodeText(children);
+  const id = slugify(text);
+  return <Tag id={id} {...props}>{children}</Tag>;
+};
+
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   isDark = false,
@@ -229,12 +254,54 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           background-color: rgba(63, 63, 70, 0.4);
           color: #e4e4e7;
         }
+
+        /* Scrollbar styles for dark mode */
+        .dark ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .dark ::-webkit-scrollbar-track {
+          background: #18181b;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+          background: #3f3f46;
+          border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+          background: #52525b;
+        }
       `}</style>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          pre: ({ children, ...props }) => <PreBlock {...props} isDark={isDark}>{children}</PreBlock>,
+          code: ({ className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || "");
+            const isInline = !match && !String(children).includes("\n");
+            
+            if (isInline) {
+               return (
+                 <code className={className} {...props}>
+                   {children}
+                 </code>
+               )
+            }
+            
+            return (
+              <PreBlock isDark={isDark}>
+                 <code className={className} {...props}>
+                   {children}
+                 </code>
+              </PreBlock>
+            );
+          },
+          pre: ({ children }: any) => <>{children}</>,
+          h1: (props) => <Heading level={1} {...props} />,
+          h2: (props) => <Heading level={2} {...props} />,
+          h3: (props) => <Heading level={3} {...props} />,
+          h4: (props) => <Heading level={4} {...props} />,
+          h5: (props) => <Heading level={5} {...props} />,
+          h6: (props) => <Heading level={6} {...props} />,
         }}
       >
         {content}
