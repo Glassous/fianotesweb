@@ -1,0 +1,43 @@
+name: Deploy FiaNotes
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Site Repo
+        uses: actions/checkout@v4
+
+      - name: Checkout Private Notes Repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.NOTES_REPO_PATH }} # e.g. username/my-private-notes
+          token: ${{ secrets.NOTES_PAT }} # Personal Access Token with repo read scope
+          path: content # Check out into 'content' folder
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Content Manifest
+        run: node scripts/scan-notes.js
+
+      - name: Build React App
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist

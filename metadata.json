@@ -1,0 +1,5 @@
+{
+  "name": "FiaNotes",
+  "description": "A secure, read-only personal knowledge base generated statically from a private GitHub repository.",
+  "requestFramePermissions": []
+}
