@@ -5,11 +5,13 @@ import { OutlineItem } from "../types";
 interface OutlineViewProps {
   items: OutlineItem[];
   onHeadingClick: (id: string) => void;
+  activeHeadingId?: string | null;
 }
 
 interface OutlineNodeProps {
   item: OutlineItem;
   onHeadingClick: (id: string) => void;
+  activeHeadingId?: string | null;
 }
 
 const ChevronIcon = ({ open }: { open: boolean }) => (
@@ -28,9 +30,10 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
   </svg>
 );
 
-const OutlineNode: React.FC<OutlineNodeProps> = ({ item, onHeadingClick }) => {
+const OutlineNode: React.FC<OutlineNodeProps> = ({ item, onHeadingClick, activeHeadingId }) => {
   const [isOpen, setIsOpen] = useState(true);
   const hasChildren = item.children && item.children.length > 0;
+  const isActive = activeHeadingId === item.id;
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -45,7 +48,12 @@ const OutlineNode: React.FC<OutlineNodeProps> = ({ item, onHeadingClick }) => {
   return (
     <div className="select-none">
       <div
-        className="flex items-center py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded cursor-pointer text-sm text-zinc-600 dark:text-zinc-400"
+        className={`flex items-center py-1 rounded cursor-pointer text-sm transition-colors
+          ${isActive 
+            ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium" 
+            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          }
+        `}
         style={{ paddingLeft: `${(item.level - 1) * 12 + 8}px` }}
         onClick={handleClick}
       >
@@ -64,6 +72,7 @@ const OutlineNode: React.FC<OutlineNodeProps> = ({ item, onHeadingClick }) => {
               key={child.id}
               item={child}
               onHeadingClick={onHeadingClick}
+              activeHeadingId={activeHeadingId}
             />
           ))}
         </div>
@@ -72,7 +81,7 @@ const OutlineNode: React.FC<OutlineNodeProps> = ({ item, onHeadingClick }) => {
   );
 };
 
-export const OutlineView: React.FC<OutlineViewProps> = ({ items, onHeadingClick }) => {
+export const OutlineView: React.FC<OutlineViewProps> = ({ items, onHeadingClick, activeHeadingId }) => {
   const { t } = useTranslation();
   if (items.length === 0) {
     return (
@@ -85,7 +94,12 @@ export const OutlineView: React.FC<OutlineViewProps> = ({ items, onHeadingClick 
   return (
     <div className="flex flex-col py-2">
       {items.map((item) => (
-        <OutlineNode key={item.id} item={item} onHeadingClick={onHeadingClick} />
+        <OutlineNode 
+          key={item.id} 
+          item={item} 
+          onHeadingClick={onHeadingClick} 
+          activeHeadingId={activeHeadingId}
+        />
       ))}
     </div>
   );

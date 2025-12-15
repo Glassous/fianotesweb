@@ -373,6 +373,7 @@ const MainLayout: React.FC = () => {
   // Outline State
   const [sidebarTab, setSidebarTab] = useState<"files" | "outline">("files");
   const [outlineItems, setOutlineItems] = useState<OutlineItem[]>([]);
+  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
 
   // View Mode State (for HTML files)
   const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
@@ -532,10 +533,72 @@ const MainLayout: React.FC = () => {
       setSidebarTab("outline");
     } else {
       setOutlineItems([]);
+      setActiveHeadingId(null);
       // Switch back to files if no valid markdown file is active
       setSidebarTab("files");
     }
   }, [currentNote]);
+
+  // Effect: Scroll Spy for Outline Highlighting
+  useEffect(() => {
+    const container = mainContentRef.current;
+    if (!container || !outlineItems.length) return;
+
+    // Helper to flatten outline items for easier traversal
+    const flattenItems = (items: OutlineItem[]): OutlineItem[] => {
+      return items.reduce((acc, item) => {
+        acc.push(item);
+        if (item.children) {
+          acc.push(...flattenItems(item.children));
+        }
+        return acc;
+      }, [] as OutlineItem[]);
+    };
+
+    const flatHeadings = flattenItems(outlineItems);
+
+    const handleScroll = () => {
+      const containerRect = container.getBoundingClientRect();
+      const offset = 120; // Look a bit down from the top
+
+      let currentActiveId = null;
+
+      for (const item of flatHeadings) {
+        const element = document.getElementById(item.id);
+        if (!element) continue;
+
+        const rect = element.getBoundingClientRect();
+        
+        // Check if the heading is above or near the top of the container
+        if (rect.top <= containerRect.top + offset) {
+          currentActiveId = item.id;
+        } else {
+          // Since headings are ordered, once we find one below, we can stop
+          break;
+        }
+      }
+
+      setActiveHeadingId(currentActiveId);
+    };
+
+    // Throttle scroll event
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    container.addEventListener("scroll", onScroll);
+    // Initial check
+    handleScroll();
+
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [outlineItems]);
 
   const handleHeadingClick = (id: string) => {
     const element = document.getElementById(id);
@@ -765,6 +828,7 @@ const MainLayout: React.FC = () => {
             activeTab={sidebarTab}
             onTabChange={setSidebarTab}
             onHeadingClick={handleHeadingClick}
+            activeHeadingId={activeHeadingId}
           />
         </div>
       </aside>

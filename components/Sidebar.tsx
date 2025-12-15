@@ -15,6 +15,7 @@ interface SidebarProps {
   activeTab?: "files" | "outline";
   onTabChange?: (tab: "files" | "outline") => void;
   onHeadingClick?: (id: string) => void;
+  activeHeadingId?: string | null;
 }
 
 interface SidebarNodeProps {
@@ -167,6 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab = "files",
   onTabChange,
   onHeadingClick,
+  activeHeadingId,
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
@@ -301,6 +303,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <OutlineView
           items={outlineItems}
           onHeadingClick={onHeadingClick || (() => {})}
+          activeHeadingId={activeHeadingId}
         />
       </div>
     </div>
