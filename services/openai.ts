@@ -1,14 +1,32 @@
 import i18n from "../i18n";
 
 export interface ChatMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
+  role: "system" | "user" | "assistant" | "tool";
+  content: string | null;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+  name?: string;
+}
+
+export interface ToolCall {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
 }
 
 export interface OpenAIConfig {
   baseUrl: string;
   apiKey: string;
   model: string;
+}
+
+export interface StreamUpdate {
+  content?: string;
+  reasoning?: string;
+  tool_calls?: any[];
 }
 
 export const getOpenAIConfig = (): OpenAIConfig => {
@@ -21,7 +39,8 @@ export const getOpenAIConfig = (): OpenAIConfig => {
 
 export const streamChatCompletion = async (
   messages: ChatMessage[],
-  onChunk: (content: string) => void,
+  tools: any[] | undefined,
+  onUpdate: (update: StreamUpdate) => void,
   onDone: () => void,
   onError: (error: Error) => void
 ) => {
@@ -33,17 +52,23 @@ export const streamChatCompletion = async (
   }
 
   try {
+    const body: any = {
+      model: config.model,
+      messages: messages,
+      stream: true,
+    };
+    
+    if (tools && tools.length > 0) {
+      body.tools = tools;
+    }
+
     const response = await fetch(`${config.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify({
-        model: config.model,
-        messages: messages,
-        stream: true,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -64,7 +89,7 @@ export const streamChatCompletion = async (
       const { done, value } = await reader.read();
       if (done) {
         if (isThinking) {
-          onChunk("</think>");
+          onUpdate({ reasoning: "</think>" });
           isThinking = false;
         }
         break;
@@ -85,21 +110,30 @@ export const streamChatCompletion = async (
             const delta = json.choices[0]?.delta || {};
             const content = delta.content || "";
             const reasoning = delta.reasoning_content || "";
+            const tool_calls = delta.tool_calls;
 
             if (reasoning) {
               if (!isThinking) {
-                onChunk("<think>");
+                onUpdate({ reasoning: "<think>" });
                 isThinking = true;
               }
-              onChunk(reasoning);
+              onUpdate({ reasoning });
             }
 
             if (content) {
               if (isThinking) {
-                onChunk("</think>");
+                onUpdate({ reasoning: "</think>" });
                 isThinking = false;
               }
-              onChunk(content);
+              onUpdate({ content });
+            }
+
+            if (tool_calls) {
+              if (isThinking) {
+                onUpdate({ reasoning: "</think>" });
+                isThinking = false;
+              }
+              onUpdate({ tool_calls });
             }
           } catch (e) {
             console.error("Error parsing JSON chunk", e);

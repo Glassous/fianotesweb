@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RawNoteFile, FileSystemNode, FolderItem, ChatSession } from "../types";
-import { ChatMessage } from "../services/openai";
+import { ChatMessage, ToolCall } from "../services/openai";
 import { fetchNoteContent } from "../services/github";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useChatContext } from "../contexts/ChatContext";
@@ -246,6 +246,35 @@ const FilePickerNode: React.FC<{
   );
 };
 
+const ToolCallView = ({ call }: { call: ToolCall }) => {
+  let label = call.function.name;
+  let detail = "";
+  try {
+    const args = JSON.parse(call.function.arguments);
+    if (call.function.name === 'read_file') {
+      label = "Reading File";
+      detail = args.file_path;
+    } else if (call.function.name === 'list_files') {
+      label = "Listing Files";
+      detail = "Scanning directory...";
+    }
+  } catch {}
+
+  return (
+    <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700/50 mb-2 select-none">
+      <div className="w-4 h-4 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0">
+        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <div className="flex flex-col min-w-0">
+         <span className="font-medium">{label}</span>
+         {detail && <span className="truncate opacity-75">{detail}</span>}
+      </div>
+    </div>
+  );
+};
+
 interface CopilotSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -287,8 +316,16 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     loadSession: hookLoadSession, 
     clearCurrentSession, 
     deleteSession: hookDeleteSession,
-    regenerateLastResponse 
+    regenerateLastResponse,
+    setFileContext
   } = useChatContext();
+
+  // Update file context for tools
+  useEffect(() => {
+    if (notes) {
+      setFileContext(notes);
+    }
+  }, [notes, setFileContext]);
 
   const [input, setInput] = useState("");
   const [isSelectingFile, setIsSelectingFile] = useState(false);
@@ -739,32 +776,49 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                             >
                                 {msg.role === "user" ? (
                     <div className="max-w-[90%] rounded-lg p-3 text-sm bg-blue-600 text-white">
-                        {renderUserMessage(msg.content)}
+                        {renderUserMessage(msg.content || "")}
+                    </div>
+                ) : msg.role === "tool" ? (
+                    <div className="w-full text-xs text-zinc-500 dark:text-zinc-400 px-1 mb-2 animate-in fade-in slide-in-from-left-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                            <span className="font-medium">Tool Output ({msg.name})</span>
+                        </div>
+                        <div className="bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-zinc-100 dark:border-zinc-800 font-mono text-[10px] max-h-40 overflow-y-auto whitespace-pre-wrap">
+                            {msg.content}
+                        </div>
                     </div>
                 ) : (
                     <div className="w-full text-sm text-zinc-800 dark:text-zinc-200 px-1">
-                        <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />
-                        <div className="flex items-center gap-3 mt-2 select-none">
-                            <button 
-                                onClick={() => handleCopy(msg.content)}
-                                className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                                title={t('common.copy')}
-                            >
-                                <ClipboardIcon />
-                                <span>{t('common.copy')}</span>
-                            </button>
-                            {idx === messages.length - 1 && (
+                        {msg.tool_calls?.map((call, i) => (
+                            <ToolCallView key={call.id || i} call={call} />
+                        ))}
+                        {msg.content && <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />}
+                        {!msg.tool_calls && (
+                            <div className="flex items-center gap-3 mt-2 select-none">
                                 <button 
-                                    onClick={regenerateLastResponse}
-                                    disabled={isLoading}
-                                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-blue-500 transition-colors disabled:opacity-50"
-                                    title={t('common.regenerate')}
+                                    onClick={() => handleCopy(msg.content || "")}
+                                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                    title={t('common.copy')}
                                 >
-                                    <RefreshIcon />
-                                    <span>{t('common.regenerate')}</span>
+                                    <ClipboardIcon />
+                                    <span>{t('common.copy')}</span>
                                 </button>
-                            )}
-                        </div>
+                                {idx === messages.length - 1 && (
+                                    <button 
+                                        onClick={regenerateLastResponse}
+                                        disabled={isLoading}
+                                        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-blue-500 transition-colors disabled:opacity-50"
+                                        title={t('common.regenerate')}
+                                    >
+                                        <RefreshIcon />
+                                        <span>{t('common.regenerate')}</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
                             </div>
