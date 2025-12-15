@@ -99,7 +99,7 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
   selectedId,
   depth = 0,
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();

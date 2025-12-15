@@ -522,9 +522,11 @@ const MainLayout: React.FC = () => {
             <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 tracking-tight">
               FiaNotes
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              {isLoading ? "Loading..." : "Knowledge Base"}
-            </p>
+            {isLoading && (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Loading...
+              </p>
+            )}
           </div>
           {/* Close button for Mobile/Hover state */}
           {(isMobile || hoverOpen) && (
