@@ -8,6 +8,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
+import { CopilotSidebar } from "./components/CopilotSidebar";
 import { MarkdownRenderer } from "./components/MarkdownRenderer";
 import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
@@ -96,6 +97,38 @@ const SystemIcon = () => (
   </svg>
 );
 
+const RobotIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+    />
+  </svg>
+);
+
+const StarIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+    />
+  </svg>
+);
+
 type ThemeMode = "system" | "light" | "dark";
 
 const MainLayout: React.FC = () => {
@@ -106,6 +139,7 @@ const MainLayout: React.FC = () => {
 
   // --- State ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoverOpen, setHoverOpen] = useState(false); // For edge hover
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -475,6 +509,19 @@ const MainLayout: React.FC = () => {
               </div>
             )}
 
+            {/* Copilot Toggle Button */}
+            <button
+              onClick={() => setIsCopilotOpen(!isCopilotOpen)}
+              className={`p-2 rounded-md transition-colors focus:outline-none ${
+                isCopilotOpen 
+                  ? "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30" 
+                  : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              }`}
+              title="Fia Copilot"
+            >
+              <StarIcon />
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               onClick={cycleTheme}
@@ -550,6 +597,16 @@ const MainLayout: React.FC = () => {
           )}
         </main>
       </div>
+
+      <CopilotSidebar
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+        notes={notesData}
+        fileTree={fileTree}
+        activeNote={currentNote || undefined}
+        isMobile={isMobile}
+        isDarkMode={isDarkMode}
+      />
     </div>
   );
 };

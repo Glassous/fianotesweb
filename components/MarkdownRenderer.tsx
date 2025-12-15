@@ -10,6 +10,7 @@ import "github-markdown-css/github-markdown-light.css";
 interface MarkdownRendererProps {
   content: string;
   isDark?: boolean;
+  variant?: "document" | "chat";
 }
 
 // --- Icons ---
@@ -185,15 +186,21 @@ const Heading = ({ level, children, ...props }: any) => {
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   isDark = false,
+  variant = "document",
 }) => {
+  const containerClasses = variant === "document"
+    ? "markdown-body p-8 bg-white dark:bg-zinc-950 min-h-screen transition-colors duration-200 text-zinc-900 dark:text-zinc-100"
+    : "markdown-body bg-transparent text-zinc-800 dark:text-zinc-200 text-sm"; // Chat variant
+
   return (
     // Updated colors to Zinc (black-gray)
     // Removed 'prose' (Tailwind Typography) and added 'markdown-body' (GitHub Markdown CSS)
-    <div className="markdown-body p-8 bg-white dark:bg-zinc-950 min-h-screen transition-colors duration-200 text-zinc-900 dark:text-zinc-100">
+    <div className={containerClasses}>
       <style>{`
         .markdown-body {
           background-color: transparent !important;
           font-family: inherit;
+          min-height: auto !important;
         }
         
         /* Ensure PreBlock scrolls horizontally */

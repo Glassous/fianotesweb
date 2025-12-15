@@ -41,3 +41,12 @@ export interface OutlineItem {
   line: number;
   children: OutlineItem[];
 }
+
+import { ChatMessage } from "./services/openai";
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  timestamp: number;
+  messages: ChatMessage[];
+}
