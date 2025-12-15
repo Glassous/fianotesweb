@@ -7,9 +7,9 @@ import { useChatContext } from "../contexts/ChatContext";
 import { LoadingAnimation } from "./LoadingAnimation";
 
 // --- Icons ---
-const SparklesIcon = () => (
+const SparklesIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg
-    className="w-5 h-5"
+    className={className}
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"
@@ -646,9 +646,42 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                         className="flex-1 overflow-y-auto p-4 space-y-4 relative min-h-0"
                     >
                         {messages.length === 0 && (
-                            <div className="text-center text-zinc-400 dark:text-zinc-500 mt-10 text-sm">
-                            <p>Start a conversation with Fia Copilot.</p>
-                            <p className="mt-2">You can add notes to context.</p>
+                            <div className="flex flex-col items-center justify-center h-full text-center px-6 py-10 space-y-8 animate-in fade-in duration-500">
+                                <div className="relative">
+                                    <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-2 ring-1 ring-blue-100 dark:ring-blue-900/30">
+                                        <SparklesIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 bg-white dark:bg-zinc-800 rounded-full p-1 shadow-sm border border-zinc-100 dark:border-zinc-700">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-2 max-w-[260px]">
+                                    <h3 className="font-semibold text-zinc-800 dark:text-zinc-100 text-lg">
+                                        Hi, I'm Fia Copilot
+                                    </h3>
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                        I can help you analyze notes, answer questions, and generate ideas.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-2.5 w-full max-w-[240px]">
+                                    {[
+                                        "Summarize this note",
+                                        "Explain key concepts", 
+                                        "Draft a continuation",
+                                        "Find related notes"
+                                    ].map((suggestion, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setInput(suggestion)}
+                                            className="group flex items-center gap-3 px-3 py-2.5 text-xs bg-white dark:bg-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl border border-zinc-200 dark:border-zinc-700/50 hover:border-blue-200 dark:hover:border-blue-900/50 transition-all text-left shadow-sm hover:shadow-md"
+                                        >
+                                            <span className="flex-1 truncate">"{suggestion}"</span>
+                                            <span className="opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity">→</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         )}
                         {messages.map((msg, idx) => (

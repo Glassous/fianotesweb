@@ -165,6 +165,12 @@ const getLanguageFromExtension = (filePath: string): string | null => {
   }
 };
 
+interface RecentFile {
+  filePath: string;
+  title: string;
+  timestamp: number;
+}
+
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
@@ -248,6 +254,9 @@ const MainLayout: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Recent Files State
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
 
   // Outline State
   const [sidebarTab, setSidebarTab] = useState<"files" | "outline">("files");
@@ -283,6 +292,16 @@ const MainLayout: React.FC = () => {
 
   useEffect(() => {
     loadNotes();
+    
+    // Load Recent Files
+    const stored = localStorage.getItem("recentFiles");
+    if (stored) {
+      try {
+        setRecentFiles(JSON.parse(stored));
+      } catch (e) {
+        console.error("Failed to parse recent files", e);
+      }
+    }
   }, []);
 
   // --- Theme State & Logic ---
@@ -372,6 +391,25 @@ const MainLayout: React.FC = () => {
     if (!activeFilePath) return null;
     return notesData.find((n) => n.filePath === activeFilePath);
   }, [activeFilePath, notesData]);
+
+  // Effect: Update Recent Files
+  useEffect(() => {
+    if (currentNote) {
+      setRecentFiles((prev) => {
+        const newItem: RecentFile = {
+          filePath: currentNote.filePath,
+          title: currentNote.metadata?.title || currentNote.filePath.split("/").pop()?.replace(/\.md$/, "") || "Untitled",
+          timestamp: Date.now(),
+        };
+        // Remove existing entry for same file to avoid duplicates
+        const filtered = prev.filter((f) => f.filePath !== currentNote.filePath);
+        // Add new item to top
+        const newRecent = [newItem, ...filtered].slice(0, 10); // Keep top 10
+        localStorage.setItem("recentFiles", JSON.stringify(newRecent));
+        return newRecent;
+      });
+    }
+  }, [currentNote]);
 
   // Effect: Update outline when note content changes
   useEffect(() => {
@@ -607,15 +645,24 @@ const MainLayout: React.FC = () => {
             </button>
 
             {currentNote ? (
-              <div className="flex flex-col truncate">
-                <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 truncate">
-                  {currentNote.metadata?.title ||
-                    currentNote.filePath.split("/").pop()?.replace(/\.md$/, "")}
-                </h2>
-                <div className="flex items-center text-xs text-zinc-500 dark:text-zinc-400 truncate space-x-2">
-                  <span>{currentNote.filePath}</span>
+              <>
+                <div className="flex flex-col truncate">
+                  <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                    {currentNote.metadata?.title ||
+                      currentNote.filePath.split("/").pop()?.replace(/\.md$/, "")}
+                  </h2>
+                  <div className="flex items-center text-xs text-zinc-500 dark:text-zinc-400 truncate space-x-2">
+                    <span>{currentNote.filePath}</span>
+                  </div>
                 </div>
-              </div>
+                <button
+                  onClick={() => navigate("/")}
+                  className="ml-2 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
+                  title="Close file"
+                >
+                  <CloseIcon />
+                </button>
+              </>
             ) : (
               <span className="text-zinc-500 dark:text-zinc-400 font-medium">
                 FiaNotes
@@ -751,23 +798,62 @@ const MainLayout: React.FC = () => {
             </div>
           ) : (
             /* Empty State */
-            <div className="flex flex-col items-center justify-center h-full text-zinc-400 dark:text-zinc-500 p-4 transition-colors">
-              <svg
-                className="w-16 h-16 mb-4 text-zinc-200 dark:text-zinc-800"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-              <p className="text-lg font-medium text-zinc-500 dark:text-zinc-400">
-                Select a note to begin reading
-              </p>
+            <div className="flex flex-col items-center justify-center h-full text-zinc-400 dark:text-zinc-500 p-4 transition-colors animate-in fade-in duration-500">
+              <div className="mb-8 flex flex-col items-center">
+                <div className="w-16 h-16 mb-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center">
+                  <svg className="w-8 h-8 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Welcome to FiaNotes</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">Select a note to begin reading or writing.</p>
+              </div>
+
+              <div className="grid gap-6 w-full max-w-lg">
+                {/* Quick Actions */}
+                <div className="grid grid-cols-1 gap-4">
+                  <button 
+                    onClick={() => setIsCopilotOpen(true)}
+                    className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md rounded-xl transition-all group text-left"
+                  >
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                      <SparklesIcon />
+                    </div>
+                    <div>
+                      <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">Ask Fia Copilot</span>
+                      <span className="block text-xs text-zinc-500 mt-1">Get AI assistance with your notes</span>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Recent Files */}
+                {recentFiles.length > 0 && (
+                  <div className="w-full">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3 ml-1">Recently Opened</h4>
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+                      {recentFiles.map((file) => (
+                        <button
+                          key={file.filePath}
+                          onClick={() => navigate(`/note/${file.filePath}`)}
+                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 border-b last:border-0 border-zinc-100 dark:border-zinc-800 transition-colors group"
+                        >
+                          <div className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 group-hover:text-blue-500 transition-colors">
+                            {/* Simple File Icon */}
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">{file.title}</div>
+                            <div className="text-xs text-zinc-400 truncate">{file.filePath}</div>
+                          </div>
+                          <span className="text-xs text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity">Open</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </main>
