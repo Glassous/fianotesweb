@@ -141,7 +141,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if ((s.title === "New Chat" || s.title.endsWith("...")) && newMessages.length > 0) {
              const firstUser = newMessages.find(m => m.role === "user");
              if (firstUser) {
-                 const text = firstUser.content.split("\n\n--- File:")[0];
+                 const text = (firstUser.content || "").split("\n\n--- File:")[0];
                  const candidateTitle = text.slice(0, 30) + (text.length > 30 ? "..." : "");
                  if (candidateTitle) title = candidateTitle;
              }

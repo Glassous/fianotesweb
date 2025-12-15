@@ -52,6 +52,18 @@ const SendIcon = () => (
   </svg>
 );
 
+const ArrowsExpandIcon = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M20 8V4m0 0h-4M4 16v4m0 0h4M20 16v4m0 0h-4" />
+  </svg>
+);
+
+const ArrowsContractIcon = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 9h4V5M19 9h-4V5M5 15h4v4M19 15h-4v4" />
+  </svg>
+);
+
 const PaperClipIcon = () => (
   <svg
     className="w-5 h-5"
@@ -353,6 +365,8 @@ interface CopilotSidebarProps {
   onNoteContentLoad?: (filePath: string, content: string) => void;
   contextFiles: RawNoteFile[];
   setContextFiles: (files: RawNoteFile[]) => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
@@ -369,6 +383,8 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   onNoteContentLoad,
   contextFiles: selectedContextFiles,
   setContextFiles: setSelectedContextFiles,
+  isExpanded = false,
+  onToggleExpand,
 }) => {
   const { t } = useTranslation();
   const { 
@@ -414,7 +430,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
       if (msg.role !== 'user') return;
       
       // Check for new format
-      const parts = msg.content.split("\n\nReference Documents:");
+      const parts = (msg.content || "").split("\n\nReference Documents:");
       if (parts.length > 1) {
         const docsSection = parts[1];
         const regex = /<document name="(.*?)">/g;
@@ -425,7 +441,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
       }
 
       // Check for legacy format fallback
-      const legacyParts = msg.content.split("\n\n--- File: ");
+      const legacyParts = (msg.content || "").split("\n\n--- File: ");
       if (legacyParts.length > 1) {
           legacyParts.slice(1).forEach(part => {
               const path = part.split(" ---\n")[0];
@@ -649,12 +665,18 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
   const containerClasses = isMobile
     ? `fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 shadow-2xl transition-transform duration-300 rounded-t-2xl flex flex-col h-[85vh] ${isOpen ? "translate-y-0" : "translate-y-full"}`
-    : `bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col h-full overflow-hidden transition-all duration-300 relative`;
+    : `bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col h-full overflow-hidden relative`;
 
   const desktopStyle = isMobile ? {} : {
-    width: width,
-    marginRight: isOpen ? 0 : -width,
-    visibility: isOpen ? 'visible' as const : 'hidden' as const
+    position: 'absolute' as const,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: isExpanded ? '100%' : width,
+    transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+    transition: 'width 0.3s ease, transform 0.3s ease',
+    zIndex: 40,
+    boxShadow: isOpen ? '-4px 0 16px rgba(0,0,0,0.05)' : 'none'
   };
 
   const renderUserMessage = (content: string) => {
@@ -728,7 +750,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
         style={desktopStyle}
       >
         {/* Resizer Handle (Desktop) */}
-        {!isMobile && isOpen && (
+        {!isMobile && isOpen && !isExpanded && (
           <div
             className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-blue-500/50 transition-colors"
             onMouseDown={onResizeStart}
@@ -771,6 +793,17 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                     </button>
                 </>
             )}
+            
+            {!isMobile && onToggleExpand && (
+                <button
+                    onClick={onToggleExpand}
+                    className="p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors"
+                    title={isExpanded ? t('copilot.collapse') : t('copilot.expand')}
+                >
+                    {isExpanded ? <ArrowsContractIcon /> : <ArrowsExpandIcon />}
+                </button>
+            )}
+
             <button
               onClick={onClose}
               className="p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors ml-1"

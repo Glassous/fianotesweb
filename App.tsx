@@ -245,6 +245,7 @@ const MainLayout: React.FC = () => {
   // --- State ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [isCopilotExpanded, setIsCopilotExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoverOpen, setHoverOpen] = useState(false); // For edge hover
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -1016,9 +1017,14 @@ const MainLayout: React.FC = () => {
           </div>
         </header>
 
+        <div className="flex-1 flex overflow-hidden relative">
         {/* Scrollable Document Content */}
         <main
           ref={mainContentRef}
+          style={{ 
+            marginRight: !isMobile && isCopilotOpen && !isCopilotExpanded ? copilotWidth : 0,
+            transition: 'margin-right 0.3s ease'
+          }}
           className="flex-1 overflow-y-auto bg-gray-50 dark:bg-zinc-950 scroll-smooth transition-colors duration-200"
         >
           {currentNote?.content ? (
@@ -1155,28 +1161,31 @@ const MainLayout: React.FC = () => {
             </div>
           )}
         </main>
-      </div>
 
-      <CopilotSidebar
-        containerRef={copilotRef}
-        isOpen={isCopilotOpen}
-        onClose={() => setIsCopilotOpen(false)}
-        notes={notesData}
-        fileTree={fileTree}
-        activeNote={currentNote || undefined}
-        isMobile={isMobile}
-        isDarkMode={isDarkMode}
-        width={copilotWidth}
-        onResizeStart={(e) => {
-          e.preventDefault();
-          isResizingCopilot.current = true;
-          document.body.style.cursor = "col-resize";
-          document.body.style.userSelect = "none";
-        }}
-        onNoteContentLoad={handleUpdateNoteContent}
-        contextFiles={copilotContextFiles}
-        setContextFiles={setCopilotContextFiles}
-      />
+        <CopilotSidebar
+          containerRef={copilotRef}
+          isOpen={isCopilotOpen}
+          onClose={() => setIsCopilotOpen(false)}
+          notes={notesData}
+          fileTree={fileTree}
+          activeNote={currentNote || undefined}
+          isMobile={isMobile}
+          isDarkMode={isDarkMode}
+          width={copilotWidth}
+          onResizeStart={(e) => {
+            e.preventDefault();
+            isResizingCopilot.current = true;
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+          }}
+          onNoteContentLoad={handleUpdateNoteContent}
+          contextFiles={copilotContextFiles}
+          setContextFiles={setCopilotContextFiles}
+          isExpanded={isCopilotExpanded}
+          onToggleExpand={() => setIsCopilotExpanded(!isCopilotExpanded)}
+        />
+        </div>
+      </div>
     </div>
   );
 };
