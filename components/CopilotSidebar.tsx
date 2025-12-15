@@ -474,7 +474,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
   const containerClasses = isMobile
     ? `fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 shadow-2xl transition-transform duration-300 rounded-t-2xl flex flex-col h-[85vh] ${isOpen ? "translate-y-0" : "translate-y-full"}`
-    : `bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col h-full overflow-hidden transition-all duration-300`;
+    : `bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col h-full overflow-hidden transition-all duration-300 relative`;
 
   const desktopStyle = isMobile ? {} : {
     width: width,
@@ -549,7 +549,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
       <aside 
         ref={containerRef}
-        className={`${containerClasses} relative`} 
+        className={`${containerClasses}`} 
         style={desktopStyle}
       >
         {/* Resizer Handle (Desktop) */}

@@ -486,7 +486,7 @@ const MainLayout: React.FC = () => {
         ref={sidebarRef}
         className={`
           flex-none h-full bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-40
-          transition-[width,transform,background-color] duration-300 ease-in-out relative
+          transition-[width,transform,background-color] duration-300 ease-in-out
           ${
             isMobile
               ? "fixed inset-y-0 left-0" // Fixed on mobile
