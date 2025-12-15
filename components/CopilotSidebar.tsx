@@ -183,8 +183,9 @@ const FolderIcon = ({ open }: { open: boolean }) => (
 const FilePickerNode: React.FC<{
   node: FileSystemNode;
   onSelect: (path: string) => void;
+  onFolderSelect: (node: FolderItem) => void;
   depth?: number;
-}> = ({ node, onSelect, depth = 0 }) => {
+}> = ({ node, onSelect, onFolderSelect, depth = 0 }) => {
   const [isOpen, setIsOpen] = useState(depth === 0 && node.name.toLowerCase() !== "home"); // Auto-expand root unless it's the hidden home
   
   // Special handling: if this node is "home" and we are at root depth, render its children directly
@@ -192,7 +193,7 @@ const FilePickerNode: React.FC<{
       return (
           <>
             {(node as FolderItem).children.map((child) => (
-                <FilePickerNode key={child.id} node={child} onSelect={onSelect} depth={0} />
+                <FilePickerNode key={child.id} node={child} onSelect={onSelect} onFolderSelect={onFolderSelect} depth={0} />
             ))}
           </>
       );
@@ -207,20 +208,39 @@ const FilePickerNode: React.FC<{
     }
   };
 
+  const handleAddFolder = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (node.type === "folder") {
+        onFolderSelect(node as FolderItem);
+    }
+  };
+
   return (
     <div className="select-none">
       <div 
         onClick={handleClick}
-        className="flex items-center py-1.5 px-2 cursor-pointer transition-colors text-sm rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+        className="group flex items-center justify-between py-1.5 px-2 cursor-pointer transition-colors text-sm rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
-        <div className="mr-2">
-            {node.type === "folder" ? <FolderIcon open={isOpen} /> : <FileIcon />}
+        <div className="flex items-center min-w-0 overflow-hidden">
+            <div className="mr-2 shrink-0">
+                {node.type === "folder" ? <FolderIcon open={isOpen} /> : <FileIcon />}
+            </div>
+            <span className="truncate">{node.name}</span>
         </div>
-        <span className="truncate">{node.name}</span>
+        
+        {node.type === "folder" && (
+            <button
+                onClick={handleAddFolder}
+                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500 transition-all"
+                title="Add folder to context"
+            >
+                <PlusIcon />
+            </button>
+        )}
       </div>
       {node.type === "folder" && isOpen && (node as FolderItem).children.map((child) => (
-        <FilePickerNode key={child.id} node={child} onSelect={onSelect} depth={depth + 1} />
+        <FilePickerNode key={child.id} node={child} onSelect={onSelect} onFolderSelect={onFolderSelect} depth={depth + 1} />
       ))}
     </div>
   );
@@ -459,6 +479,28 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
       setSelectedContextFiles([...selectedContextFiles, file]);
     }
     setIsSelectingFile(false);
+  };
+
+  const handleFolderSelect = (folder: FolderItem) => {
+      const files: RawNoteFile[] = [];
+      
+      const traverse = (node: FileSystemNode) => {
+          if (node.type === 'file') {
+              const note = notes.find(n => n.filePath === node.path);
+              if (note) files.push(note);
+          } else {
+              (node as FolderItem).children.forEach(traverse);
+          }
+      };
+      
+      traverse(folder);
+      
+      // Add all files
+      const newFiles = files.filter(f => !selectedContextFiles.some(existing => existing.filePath === f.filePath));
+      if (newFiles.length > 0) {
+          setSelectedContextFiles([...selectedContextFiles, ...newFiles]);
+          setIsSelectingFile(false);
+      }
   };
 
   const handleFileSelect = (path: string) => {
@@ -779,7 +821,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                                     {fileTree ? (
-                                        <FilePickerNode node={fileTree} onSelect={handleFileSelect} />
+                                        <FilePickerNode node={fileTree} onSelect={handleFileSelect} onFolderSelect={handleFolderSelect} />
                                     ) : (
                                         <>
                                         {filteredNotes.map(note => (
