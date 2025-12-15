@@ -195,6 +195,22 @@ const LanguageIcon = () => (
   </svg>
 );
 
+const RefreshIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+    />
+  </svg>
+);
+
 type ThemeMode = "system" | "light" | "dark";
 
 // Helper to determine language from extension
@@ -292,6 +308,15 @@ const MainLayout: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     setIsMobileMenuOpen(false);
+  };
+
+  const handleRefreshHtmlPreview = () => {
+    if (currentNote?.filePath.endsWith(".html") && viewMode === "preview") {
+      const iframe = document.querySelector('iframe[title="Preview"]') as HTMLIFrameElement;
+      if (iframe) {
+        iframe.srcdoc = currentNote?.content || "";
+      }
+    }
   };
 
 
@@ -926,6 +951,17 @@ const MainLayout: React.FC = () => {
 
             {/* Desktop Toolbar */}
             <div className="hidden md:flex items-center gap-1">
+              {/* Refresh Button for HTML Preview */}
+              {currentNote?.filePath.endsWith(".html") && viewMode === "preview" && (
+                <button
+                  onClick={handleRefreshHtmlPreview}
+                  className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                  title={t('app.refresh')}
+                >
+                  <RefreshIcon />
+                </button>
+              )}
+
               {/* Download Button */}
               {currentNote && (
                 <button
