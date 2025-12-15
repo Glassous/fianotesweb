@@ -12,6 +12,22 @@ Fianotes Web is a self-hosted, web-based note-taking platform designed to render
 - **Responsive Design**: optimized for both desktop and mobile viewing.
 - **Fast & Modern**: Built with React, Vite, and TypeScript.
 
+## Prerequisites: GitHub Token
+
+To allow the application to access your private notes repository, you need to generate a GitHub Personal Access Token (PAT). This token acts as a password for the application to "read" your notes.
+
+1.  Go to **GitHub Settings** > **Developer settings** > **Personal access tokens**.
+2.  Select **Fine-grained tokens** (Recommended) or **Tokens (classic)**.
+    *   **Fine-grained tokens (More Secure)**:
+        *   Click **Generate new token**.
+        *   **Repository access**: Select "Only select repositories" and choose your notes repository.
+        *   **Permissions**: Select **Contents** and set it to **Read-only**.
+        *   **Metadata**: This is usually mandatory and set to **Read-only** automatically.
+    *   **Tokens (classic)**:
+        *   Click **Generate new token (classic)**.
+        *   **Scopes**: If your notes repository is private, you must check the `repo` scope (Full control of private repositories). There is no "read-only" scope for private repos in classic tokens, so treat this token carefully.
+3.  **Copy the generated token**. You will need this for the `NOTES_PAT` configuration variable.
+
 ## Configuration
 
 The application is configured using environment variables. You can set these in a `.env` file for local development or in your deployment platform's dashboard.

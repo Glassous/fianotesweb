@@ -12,6 +12,22 @@ Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面�
 - **响应式设计**：针对桌面和移动设备进行了优化。
 - **快速且现代**：基于 React、Vite 和 TypeScript 构建。
 
+## 前置准备：GitHub Token
+
+为了让应用程序能够访问您的私有笔记仓库，您需要生成一个 GitHub 个人访问令牌（Personal Access Token, PAT）。该令牌充当应用程序“读取”您笔记的密码。
+
+1.  进入 **GitHub Settings**（设置） > **Developer settings**（开发者设置） > **Personal access tokens**（个人访问令牌）。
+2.  选择 **Fine-grained tokens**（细粒度令牌，推荐）或 **Tokens (classic)**（经典令牌）。
+    *   **Fine-grained tokens (更安全)**:
+        *   点击 **Generate new token**。
+        *   **Repository access**（仓库访问）：选择 "Only select repositories"（仅选择特定仓库）并选择您的笔记仓库。
+        *   **Permissions**（权限）：找到 **Contents**（内容）并将其设置为 **Read-only**（只读）。
+        *   **Metadata**（元数据）：这通常是强制性的，会自动设置为 **Read-only**。
+    *   **Tokens (classic)**:
+        *   点击 **Generate new token (classic)**。
+        *   **Scopes**（范围）：如果您的笔记仓库是私有的，您必须勾选 `repo` 范围（对私有仓库的完全控制）。经典令牌没有针对私有仓库的“只读”范围，因此请妥善保管此令牌。
+3.  **复制生成的令牌**。您将在配置 `NOTES_PAT` 变量时使用它。
+
 ## 配置
 
 应用程序使用环境变量进行配置。您可以在本地开发的 `.env` 文件中设置这些变量，或者在部署平台的仪表板中进行设置。
