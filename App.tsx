@@ -100,6 +100,38 @@ const SystemIcon = () => (
   </svg>
 );
 
+const DownloadIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+    />
+  </svg>
+);
+
+const MoreVerticalIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+    />
+  </svg>
+);
+
 const RobotIcon = () => (
   <svg
     className="w-5 h-5"
@@ -206,10 +238,17 @@ const MainLayout: React.FC = () => {
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
 
+  // --- Mobile Menu State ---
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
         setIsLangMenuOpen(false);
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -221,7 +260,24 @@ const MainLayout: React.FC = () => {
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
     setIsLangMenuOpen(false);
+    setIsMobileMenuOpen(false);
   };
+
+  const handleDownload = () => {
+    if (!currentNote) return;
+    if (!currentNote.content) return;
+    const blob = new Blob([currentNote.content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = currentNote.filePath.split("/").pop() || "note.md";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setIsMobileMenuOpen(false);
+  };
+
 
   // --- Resize State (Desktop Only) ---
   const [sidebarWidth, setSidebarWidth] = useState(288);
@@ -788,57 +844,141 @@ const MainLayout: React.FC = () => {
               </div>
             )}
 
-            {/* Copilot Toggle Button */}
-            <button
-              onClick={() => setIsCopilotOpen(!isCopilotOpen)}
-              className={`p-2 rounded-md transition-colors focus:outline-none ${
-                isCopilotOpen 
-                  ? "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30" 
-                  : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-              }`}
-              title={t('app.copilot')}
-            >
-              <SparklesIcon />
-            </button>
-
-            {/* Language Switcher */}
-            <div className="relative" ref={langMenuRef}>
-              <button
-                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
-                title={t('app.changeLanguage')}
-              >
-                <LanguageIcon />
-              </button>
-              
-              {isLangMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50">
-                  <button
-                    onClick={() => changeLanguage('zh-CN')}
-                    className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-CN' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
-                  >
-                    简体中文
-                  </button>
-                  <button
-                    onClick={() => changeLanguage('en-US')}
-                    className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'en-US' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
-                  >
-                    English
-                  </button>
-                </div>
+            {/* Desktop Toolbar */}
+            <div className="hidden md:flex items-center gap-1">
+              {/* Download Button */}
+              {currentNote && (
+                <button
+                  onClick={handleDownload}
+                  className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                  title={t('app.download')}
+                >
+                  <DownloadIcon />
+                </button>
               )}
+
+              {/* Language Switcher */}
+              <div className="relative" ref={langMenuRef}>
+                <button
+                  onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                  className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                  title={t('app.changeLanguage')}
+                >
+                  <LanguageIcon />
+                </button>
+                
+                {isLangMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50">
+                    <button
+                      onClick={() => changeLanguage('zh-CN')}
+                      className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-CN' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                    >
+                      简体中文
+                    </button>
+                    <button
+                      onClick={() => changeLanguage('en-US')}
+                      className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'en-US' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                    >
+                      English
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Copilot Toggle Button */}
+              <button
+                onClick={() => setIsCopilotOpen(!isCopilotOpen)}
+                className={`p-2 rounded-md transition-colors focus:outline-none ${
+                  isCopilotOpen 
+                    ? "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30" 
+                    : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                }`}
+                title={t('app.copilot')}
+              >
+                <SparklesIcon />
+              </button>
+
+              {/* Theme Toggle Button */}
+              <button
+                onClick={cycleTheme}
+                className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                title={`${t('app.theme.' + themeMode)}`}
+              >
+                {themeMode === "light" && <SunIcon />}
+                {themeMode === "dark" && <MoonIcon />}
+                {themeMode === "system" && <SystemIcon />}
+              </button>
             </div>
 
-            {/* Theme Toggle Button */}
-            <button
-              onClick={cycleTheme}
-              className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
-              title={`${t('app.theme.' + themeMode)}`}
-            >
-              {themeMode === "light" && <SunIcon />}
-              {themeMode === "dark" && <MoonIcon />}
-              {themeMode === "system" && <SystemIcon />}
-            </button>
+            {/* Mobile Toolbar */}
+            <div className="flex md:hidden items-center gap-1">
+               {/* Copilot Toggle Button (Mobile) */}
+                <button
+                onClick={() => setIsCopilotOpen(!isCopilotOpen)}
+                className={`p-2 rounded-md transition-colors focus:outline-none ${
+                    isCopilotOpen 
+                    ? "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30" 
+                    : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                }`}
+                title={t('app.copilot')}
+                >
+                <SparklesIcon />
+                </button>
+
+                {/* More Menu (Mobile) */}
+                <div className="relative" ref={mobileMenuRef}>
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                    >
+                        <MoreVerticalIcon />
+                    </button>
+
+                    {isMobileMenuOpen && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50">
+                             {/* Download */}
+                             {currentNote && (
+                                <button
+                                    onClick={handleDownload}
+                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                                >
+                                    <DownloadIcon />
+                                    <span>{t('app.download')}</span>
+                                </button>
+                             )}
+                             
+                             {/* Language */}
+                             <div className="px-4 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1">
+                                {t('app.changeLanguage')}
+                             </div>
+                             <button
+                                onClick={() => changeLanguage('zh-CN')}
+                                className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-CN' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                             >
+                                简体中文
+                             </button>
+                             <button
+                                onClick={() => changeLanguage('en-US')}
+                                className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'en-US' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                             >
+                                English
+                             </button>
+
+                             {/* Theme */}
+                             <div className="border-t border-zinc-100 dark:border-zinc-700 my-1"></div>
+                             <button
+                                onClick={() => cycleTheme()}
+                                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                             >
+                                {themeMode === "light" && <SunIcon />}
+                                {themeMode === "dark" && <MoonIcon />}
+                                {themeMode === "system" && <SystemIcon />}
+                                <span>{t('app.theme.' + themeMode)}</span>
+                             </button>
+                        </div>
+                    )}
+                </div>
+            </div>
           </div>
         </header>
 
