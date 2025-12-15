@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -8,14 +8,6 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "github-markdown-css/github-markdown-light.css";
 import mermaid from "mermaid";
-
-// Initialize mermaid globally once if possible, but theme changes require re-init.
-// We'll handle theme updates in the component.
-mermaid.initialize({
-  startOnLoad: false,
-  securityLevel: "loose",
-  fontFamily: "inherit",
-});
 
 interface MarkdownRendererProps {
   content: string;
@@ -91,32 +83,11 @@ const ChevronDownIcon = ({ collapsed }: { collapsed: boolean }) => (
 );
 
 // --- Mermaid Block Component ---
-
-// Global queue to serialize mermaid rendering to prevent concurrency issues
-// Mermaid (especially when using DOM for layout) can be sensitive to concurrent render calls
-let mermaidRenderQueue = Promise.resolve();
-
-const renderMermaidSafely = (id: string, content: string): Promise<{ svg: string }> => {
-  // Chain the render call
-  const result = mermaidRenderQueue.then(async () => {
-    return mermaid.render(id, content);
-  });
-  // Update the queue tail (catch errors so the queue doesn't stall)
-  mermaidRenderQueue = result.catch(() => {}).then(() => {});
-  return result;
-};
-
 const MermaidBlock = ({ chart, isDark }: { chart: string; isDark: boolean }) => {
   const [svg, setSvg] = useState("");
-  // Use useMemo to ensure ID is stable across re-renders
-  const id = useMemo(() => `mermaid-${Math.random().toString(36).substr(2, 9)}`, []);
+  const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 
   useEffect(() => {
-    let isMounted = true;
-
-    // Update configuration for theme
-    // Note: initialize is generally safe to call multiple times, but we rely on the queue
-    // to ensure 'render' picks up the latest config or at least doesn't race.
     mermaid.initialize({
       startOnLoad: false,
       theme: isDark ? "dark" : "default",
@@ -125,34 +96,18 @@ const MermaidBlock = ({ chart, isDark }: { chart: string; isDark: boolean }) => 
     });
 
     const renderChart = async () => {
-      if (!chart || !chart.trim()) {
-         if (isMounted) setSvg("");
-         return;
-      }
-
       try {
-        // Use the serialized queue instead of direct mermaid.render
-        const { svg } = await renderMermaidSafely(id, chart);
-        if (isMounted) {
-          setSvg(svg);
-        }
+        const { svg } = await mermaid.render(id, chart);
+        setSvg(svg);
       } catch (error) {
         console.error("Mermaid failed to render", error);
-        if (isMounted) {
-          setSvg(`<div class="text-red-500 text-sm p-2 border border-red-200 rounded bg-red-50 dark:bg-red-900/20 dark:border-red-800">
-            <p class="font-bold mb-1">Mermaid Render Error</p>
-            <div class="opacity-80">${error instanceof Error ? error.message : String(error)}</div>
-          </div>`);
-        }
+        // Keep the error message simple or maybe show the code block instead
+        setSvg(`<div class="text-red-500 text-sm p-2 border border-red-200 rounded bg-red-50 dark:bg-red-900/20 dark:border-red-800">Failed to render diagram</div>`);
       }
     };
 
     renderChart();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [chart, isDark, id]);
+  }, [chart, isDark]);
 
   return (
     <div 
@@ -304,6 +259,13 @@ const getNodeText = (node: any): string => {
   return "";
 };
 
+const Heading = ({ level, children, ...props }: any) => {
+  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const text = getNodeText(children);
+  const id = slugify(text);
+  return <Tag id={id} {...props}>{children}</Tag>;
+};
+
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   isDark = false,
@@ -312,27 +274,6 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   onInternalLinkClick,
 }) => {
   const { t } = useTranslation();
-  
-  // Initialize slug tracker for this render
-  // Note: Since React renders synchronously, this object will be populated
-  // as the components are rendered in order.
-  const slugCounts: Record<string, number> = {};
-
-  const createHeading = (level: number) => ({ children, ...props }: any) => {
-    const Tag = `h${level}` as keyof JSX.IntrinsicElements;
-    const text = getNodeText(children);
-    let id = slugify(text);
-    
-    if (slugCounts[id] !== undefined) {
-      slugCounts[id]++;
-      id = `${id}-${slugCounts[id]}`;
-    } else {
-      slugCounts[id] = 0;
-    }
-    
-    return <Tag id={id} {...props}>{children}</Tag>;
-  };
-
   const containerClasses = variant === "document"
     ? "markdown-body p-8 bg-white dark:bg-zinc-950 min-h-screen transition-colors duration-200 text-zinc-900 dark:text-zinc-100 relative"
     : "markdown-body bg-transparent text-zinc-800 dark:text-zinc-200 text-sm"; // Chat variant
@@ -515,12 +456,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                 );
               },
               pre: ({ children }: any) => <>{children}</>,
-              h1: createHeading(1),
-              h2: createHeading(2),
-              h3: createHeading(3),
-              h4: createHeading(4),
-              h5: createHeading(5),
-              h6: createHeading(6),
+              h1: (props) => <Heading level={1} {...props} />,
+              h2: (props) => <Heading level={2} {...props} />,
+              h3: (props) => <Heading level={3} {...props} />,
+              h4: (props) => <Heading level={4} {...props} />,
+              h5: (props) => <Heading level={5} {...props} />,
+              h6: (props) => <Heading level={6} {...props} />,
               a: ({ node, ...props }: any) => {
                 const href = props.href || "";
                 const isInternal = href.startsWith("#");
