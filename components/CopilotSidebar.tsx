@@ -261,7 +261,7 @@ const ToolCallView = ({ call }: { call: ToolCall }) => {
   } catch {}
 
   return (
-    <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700/50 mb-2 select-none">
+    <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700/50 select-none">
       <div className="w-4 h-4 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0">
         <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -271,6 +271,70 @@ const ToolCallView = ({ call }: { call: ToolCall }) => {
          <span className="font-medium">{label}</span>
          {detail && <span className="truncate opacity-75">{detail}</span>}
       </div>
+    </div>
+  );
+};
+
+const ToolOutputView = ({ name, content }: { name?: string, content: string }) => (
+    <div className="w-full text-xs text-zinc-500 dark:text-zinc-400 px-1 mb-2 animate-in fade-in slide-in-from-left-2">
+        <div className="flex items-center gap-2 mb-1">
+            <div className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <span className="font-medium">Tool Output ({name})</span>
+        </div>
+        <div className="bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-zinc-100 dark:border-zinc-800 font-mono text-[10px] max-h-40 overflow-y-auto whitespace-pre-wrap">
+            {content}
+        </div>
+    </div>
+);
+
+const ToolSequence = ({ messages, isDarkMode }: { messages: ChatMessage[], isDarkMode: boolean }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const stepCount = messages.length;
+
+  if (!messages || messages.length === 0) return null;
+
+  return (
+    <div className="w-full mb-2">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:text-zinc-500 dark:hover:text-zinc-300 py-1.5 transition-colors select-none w-full text-left group"
+      >
+        <div className={`transform transition-transform duration-200 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 ${isExpanded ? 'rotate-90' : ''}`}>
+             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+             </svg>
+        </div>
+        <span className="font-medium">
+            Tool Process
+            <span className="ml-1.5 opacity-60 font-normal">({stepCount} steps)</span>
+        </span>
+      </button>
+      
+      {isExpanded && (
+        <div className="pl-3 border-l-2 border-zinc-100 dark:border-zinc-800 ml-1.5 mt-1 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+           {messages.map((msg, i) => (
+             <div key={i}>
+                {msg.role === 'assistant' && (
+                    <>
+                        {msg.tool_calls?.map((call, idx) => (
+                            <ToolCallView key={call.id || idx} call={call} />
+                        ))}
+                        {msg.content && (
+                             <div className="mb-2 text-sm text-zinc-600 dark:text-zinc-300">
+                                 <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />
+                             </div>
+                        )}
+                    </>
+                )}
+                {msg.role === 'tool' && (
+                    <ToolOutputView name={msg.name} content={msg.content || ''} />
+                )}
+             </div>
+           ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -557,6 +621,32 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     n.filePath.toLowerCase().includes(fileSearch.toLowerCase())
   );
 
+  // Group messages for tool sequences
+  const groupedMessages = React.useMemo(() => {
+    const result: ({ type: 'sequence', messages: ChatMessage[] } | { type: 'single', message: ChatMessage })[] = [];
+    let currentSequence: ChatMessage[] = [];
+    
+    messages.forEach((msg) => {
+      const isToolRelated = (msg.role === 'assistant' && !!msg.tool_calls?.length) || msg.role === 'tool';
+      
+      if (isToolRelated) {
+        currentSequence.push(msg);
+      } else {
+        if (currentSequence.length > 0) {
+          result.push({ type: 'sequence', messages: [...currentSequence] });
+          currentSequence = [];
+        }
+        result.push({ type: 'single', message: msg });
+      }
+    });
+    
+    if (currentSequence.length > 0) {
+      result.push({ type: 'sequence', messages: [...currentSequence] });
+    }
+    
+    return result;
+  }, [messages]);
+
   const containerClasses = isMobile
     ? `fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 shadow-2xl transition-transform duration-300 rounded-t-2xl flex flex-col h-[85vh] ${isOpen ? "translate-y-0" : "translate-y-full"}`
     : `bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col h-full overflow-hidden transition-all duration-300 relative`;
@@ -769,60 +859,54 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                 </div>
                             </div>
                         )}
-                        {messages.map((msg, idx) => (
-                            <div
-                            key={idx}
-                            className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
-                            >
-                                {msg.role === "user" ? (
-                    <div className="max-w-[90%] rounded-lg p-3 text-sm bg-blue-600 text-white">
-                        {renderUserMessage(msg.content || "")}
-                    </div>
-                ) : msg.role === "tool" ? (
-                    <div className="w-full text-xs text-zinc-500 dark:text-zinc-400 px-1 mb-2 animate-in fade-in slide-in-from-left-2">
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            </div>
-                            <span className="font-medium">Tool Output ({msg.name})</span>
-                        </div>
-                        <div className="bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-zinc-100 dark:border-zinc-800 font-mono text-[10px] max-h-40 overflow-y-auto whitespace-pre-wrap">
-                            {msg.content}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="w-full text-sm text-zinc-800 dark:text-zinc-200 px-1">
-                        {msg.tool_calls?.map((call, i) => (
-                            <ToolCallView key={call.id || i} call={call} />
-                        ))}
-                        {msg.content && <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />}
-                        {!msg.tool_calls && (
-                            <div className="flex items-center gap-3 mt-2 select-none">
-                                <button 
-                                    onClick={() => handleCopy(msg.content || "")}
-                                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                                    title={t('common.copy')}
+                        {groupedMessages.map((group, idx) => {
+                            if (group.type === 'sequence') {
+                                return (
+                                    <div key={`group-${idx}`} className="w-full">
+                                        <ToolSequence messages={group.messages} isDarkMode={isDarkMode} />
+                                    </div>
+                                );
+                            }
+                            
+                            const msg = group.message;
+                            return (
+                                <div
+                                key={idx}
+                                className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                                 >
-                                    <ClipboardIcon />
-                                    <span>{t('common.copy')}</span>
-                                </button>
-                                {idx === messages.length - 1 && (
-                                    <button 
-                                        onClick={regenerateLastResponse}
-                                        disabled={isLoading}
-                                        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-blue-500 transition-colors disabled:opacity-50"
-                                        title={t('common.regenerate')}
-                                    >
-                                        <RefreshIcon />
-                                        <span>{t('common.regenerate')}</span>
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-                            </div>
-                        ))}
+                                    {msg.role === "user" ? (
+                                        <div className="max-w-[90%] rounded-lg p-3 text-sm bg-blue-600 text-white">
+                                            {renderUserMessage(msg.content || "")}
+                                        </div>
+                                    ) : (
+                                        <div className="w-full text-sm text-zinc-800 dark:text-zinc-200 px-1">
+                                            {msg.content && <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />}
+                                            <div className="flex items-center gap-3 mt-2 select-none">
+                                                <button 
+                                                    onClick={() => handleCopy(msg.content || "")}
+                                                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                                    title={t('common.copy')}
+                                                >
+                                                    <ClipboardIcon />
+                                                    <span>{t('common.copy')}</span>
+                                                </button>
+                                                {idx === groupedMessages.length - 1 && (
+                                                    <button 
+                                                        onClick={regenerateLastResponse}
+                                                        disabled={isLoading}
+                                                        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-blue-500 transition-colors disabled:opacity-50"
+                                                        title={t('common.regenerate')}
+                                                    >
+                                                        <RefreshIcon />
+                                                        <span>{t('common.regenerate')}</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                         {/* No refs here, scrolling is handled via scrollTop */}
                     </div>
 
