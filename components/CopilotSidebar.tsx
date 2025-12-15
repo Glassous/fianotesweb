@@ -4,6 +4,7 @@ import { ChatMessage } from "../services/openai";
 import { fetchNoteContent } from "../services/github";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useChatContext } from "../contexts/ChatContext";
+import { LoadingAnimation } from "./LoadingAnimation";
 
 // --- Icons ---
 const StarIcon = () => (
@@ -274,6 +275,10 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   
   // History State
   const [showHistory, setShowHistory] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; sessionId: string | null }>({
+    isOpen: false,
+    sessionId: null,
+  });
 
   // Compute files already in history to prevent duplicate "Add current file" suggestions
   const filesInHistory = React.useMemo(() => {
@@ -334,6 +339,26 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   };
 
   const [isDownloading, setIsDownloading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLocalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const tempNote: RawNoteFile = {
+          filePath: `Local: ${file.name}`,
+          content: content,
+          metadata: { title: file.name }
+      };
+      addFileContext(tempNote);
+      setIsSelectingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    reader.readAsText(file);
+  };
 
   // Auto-resize textarea
   useEffect(() => {
@@ -599,7 +624,10 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                     <span className="text-xs text-zinc-400">{new Date(session.timestamp).toLocaleDateString()}</span>
                                 </div>
                                 <button 
-                                    onClick={(e) => deleteSession(e, session.id)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteConfirmation({ isOpen: true, sessionId: session.id });
+                                    }}
                                     className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-opacity"
                                 >
                                     <XMarkIcon />
@@ -686,7 +714,19 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                     <span className="text-xs font-semibold uppercase text-zinc-500">Select File</span>
                                     <button onClick={() => setIsSelectingFile(false)} className="text-zinc-400 hover:text-zinc-600"><XMarkIcon /></button>
                                 </div>
-                                <div className="p-2 shrink-0">
+                                <div className="p-2 shrink-0 space-y-2">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleLocalFileUpload}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-md transition-colors border border-dashed border-zinc-300 dark:border-zinc-600"
+                                    >
+                                        <span className="text-lg leading-none">+</span> Upload Local File
+                                    </button>
                                     {!fileTree && (
                                         <input 
                                             type="text" 
@@ -748,7 +788,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                             </div>
                         )}
 
-                        <div className="relative flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+                        <div className="relative flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-2 rounded-xl transition-all">
                             <button
                             onClick={() => setIsSelectingFile(!isSelectingFile)}
                             className={`p-2 rounded-lg transition-colors shrink-0 h-9 w-9 flex items-center justify-center ${isSelectingFile ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"}`}
@@ -763,7 +803,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Ask anything..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 min-h-[24px] py-1.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 leading-relaxed"
+                            className="flex-1 bg-transparent border-none focus:ring-0 outline-none resize-none max-h-32 min-h-[24px] py-1.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 leading-relaxed"
                             rows={1}
                             />
                             
@@ -772,11 +812,40 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                             disabled={isLoading || (!input.trim() && selectedContextFiles.length === 0)}
                             className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 h-9 w-9 flex items-center justify-center transition-colors"
                             >
-                            <SendIcon />
+                            {isLoading ? <LoadingAnimation size="sm" color="bg-white" /> : <SendIcon />}
                             </button>
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* Delete Confirmation Overlay */}
+            {deleteConfirmation.isOpen && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-[2px] p-4">
+                    <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 p-4 w-full max-w-[280px] animate-in zoom-in-95 duration-200">
+                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Delete Chat History?</h3>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">This action cannot be undone.</p>
+                        <div className="flex gap-2 justify-end">
+                            <button 
+                                onClick={() => setDeleteConfirmation({ isOpen: false, sessionId: null })}
+                                className="px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={(e) => {
+                                    if (deleteConfirmation.sessionId) {
+                                        hookDeleteSession(deleteConfirmation.sessionId);
+                                    }
+                                    setDeleteConfirmation({ isOpen: false, sessionId: null });
+                                }}
+                                className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
       </aside>

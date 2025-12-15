@@ -11,6 +11,7 @@ import { Sidebar } from "./components/Sidebar";
 import { CopilotSidebar } from "./components/CopilotSidebar";
 import { MarkdownRenderer } from "./components/MarkdownRenderer";
 import { CodeViewer } from "./components/CodeViewer";
+import { LoadingAnimation } from "./components/LoadingAnimation";
 import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
 import { MOCK_NOTES } from "./constants";
@@ -523,9 +524,10 @@ const MainLayout: React.FC = () => {
               FiaNotes
             </h1>
             {isLoading && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Loading...
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <LoadingAnimation size="sm" color="bg-zinc-400" />
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Loading...</span>
+              </div>
             )}
           </div>
           {/* Close button for Mobile/Hover state */}
