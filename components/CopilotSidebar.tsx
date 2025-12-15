@@ -275,6 +275,35 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   // History State
   const [showHistory, setShowHistory] = useState(false);
 
+  // Compute files already in history to prevent duplicate "Add current file" suggestions
+  const filesInHistory = React.useMemo(() => {
+    const files = new Set<string>();
+    messages.forEach(msg => {
+      if (msg.role !== 'user') return;
+      
+      // Check for new format
+      const parts = msg.content.split("\n\nReference Documents:");
+      if (parts.length > 1) {
+        const docsSection = parts[1];
+        const regex = /<document name="(.*?)">/g;
+        let match;
+        while ((match = regex.exec(docsSection)) !== null) {
+            files.add(match[1]);
+        }
+      }
+
+      // Check for legacy format fallback
+      const legacyParts = msg.content.split("\n\n--- File: ");
+      if (legacyParts.length > 1) {
+          legacyParts.slice(1).forEach(part => {
+              const path = part.split(" ---\n")[0];
+              if (path) files.add(path);
+          });
+      }
+    });
+    return files;
+  }, [messages]);
+
   // --- Core Fix: Safe Auto-Scrolling ---
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -694,7 +723,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                         )}
 
                         {/* Suggest Adding Active Note */}
-                        {!isSelectingFile && activeNote && !selectedContextFiles.some(f => f.filePath === activeNote.filePath) && (
+                        {!isSelectingFile && activeNote && !selectedContextFiles.some(f => f.filePath === activeNote.filePath) && !filesInHistory.has(activeNote.filePath) && (
                             <button 
                                 onClick={() => addFileContext(activeNote)}
                                 className="flex items-center gap-1.5 mb-2 px-1 text-xs text-blue-600 dark:text-blue-400 hover:underline transition-colors w-full text-left"
