@@ -36,9 +36,9 @@ const MenuIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
+const CloseIcon = ({ className }: { className?: string }) => (
   <svg
-    className="w-6 h-6 text-zinc-600 dark:text-zinc-300"
+    className={className || "w-6 h-6 text-zinc-600 dark:text-zinc-300"}
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"
@@ -296,6 +296,7 @@ const MainLayout: React.FC = () => {
   
   // Recent Files State
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
+  const [copilotContextFiles, setCopilotContextFiles] = useState<RawNoteFile[]>([]);
 
   // Outline State
   const [sidebarTab, setSidebarTab] = useState<"files" | "outline">("files");
@@ -443,7 +444,7 @@ const MainLayout: React.FC = () => {
         // Remove existing entry for same file to avoid duplicates
         const filtered = prev.filter((f) => f.filePath !== currentNote.filePath);
         // Add new item to top
-        const newRecent = [newItem, ...filtered].slice(0, 10); // Keep top 10
+        const newRecent = [newItem, ...filtered].slice(0, 3); // Keep top 3
         localStorage.setItem("recentFiles", JSON.stringify(newRecent));
         return newRecent;
       });
@@ -542,6 +543,45 @@ const MainLayout: React.FC = () => {
   const handleSelectNote = (note: NoteItem) => {
     // Navigate using the 'note' prefix to distinguish from other potential routes
     navigate(`/note/${note.path}`);
+  };
+
+  const handleRemoveRecentFile = (e: React.MouseEvent, filePath: string) => {
+    e.stopPropagation();
+    setRecentFiles((prev) => {
+      const newRecent = prev.filter((f) => f.filePath !== filePath);
+      localStorage.setItem("recentFiles", JSON.stringify(newRecent));
+      return newRecent;
+    });
+  };
+
+  const handleAskCopilot = (text: string) => {
+    setIsCopilotOpen(true);
+    
+    // Create a display title from the first few characters
+    const cleanText = text.trim().replace(/[\n\r\t]/g, ' ').replace(/\//g, '|');
+    const truncated = cleanText.slice(0, 10);
+    const displayTitle = `${truncated}${cleanText.length > 10 ? '...' : ''}`;
+
+    const snippetFile: RawNoteFile = {
+      // Structure path so that split('/').pop() returns the display title
+      filePath: `snippets/${Date.now()}/${displayTitle}`,
+      content: text,
+      metadata: { title: t('app.selectedText') }
+    };
+    
+    // Check if duplicate content exists to avoid spamming context with same selection
+    setCopilotContextFiles(prev => {
+        const exists = prev.some(f => f.content === text);
+        if (exists) return prev;
+        return [...prev, snippetFile];
+    });
+  };
+
+  const handleClearRecentFiles = () => {
+    if (window.confirm(t('copilot.deleteConfirmTitle'))) {
+       setRecentFiles([]);
+       localStorage.removeItem("recentFiles");
+    }
   };
 
   // Logic to determine if sidebar is visible (Pinned OR Hovered)
@@ -684,24 +724,22 @@ const MainLayout: React.FC = () => {
             </button>
 
             {currentNote ? (
-              <>
-                <div className="flex flex-col truncate">
-                  <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 truncate">
-                    {currentNote.metadata?.title ||
-                      currentNote.filePath.split("/").pop()?.replace(/\.md$/, "")}
-                  </h2>
-                  <div className="flex items-center text-xs text-zinc-500 dark:text-zinc-400 truncate space-x-2">
-                    <span>{currentNote.filePath}</span>
-                  </div>
+              <div className="flex flex-col truncate">
+                <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                  {currentNote.metadata?.title ||
+                    currentNote.filePath.split("/").pop()?.replace(/\.md$/, "")}
+                </h2>
+                <div className="flex items-center text-xs text-zinc-500 dark:text-zinc-400 truncate space-x-2">
+                  <span>{currentNote.filePath}</span>
+                  <button
+                    onClick={() => navigate("/")}
+                    className="p-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
+                    title={t('app.closeFile')}
+                  >
+                    <CloseIcon className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => navigate("/")}
-                  className="ml-2 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
-                  title={t('app.closeFile')}
-                >
-                  <CloseIcon />
-                </button>
-              </>
+              </div>
             ) : (
               <span className="text-zinc-500 dark:text-zinc-400 font-medium">
                 {t('app.title')}
@@ -830,6 +868,7 @@ const MainLayout: React.FC = () => {
                   <MarkdownRenderer 
                     content={currentNote.content} 
                     isDark={isDarkMode} 
+                    onSelectionAction={handleAskCopilot}
                   />
                 )}
               </div>
@@ -896,26 +935,44 @@ const MainLayout: React.FC = () => {
                 {/* Recent Files */}
                 {recentFiles.length > 0 && (
                   <div className="w-full">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3 ml-1">{t('app.recentFiles')}</h4>
+                    <div className="flex items-center justify-between mb-3 ml-1">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{t('app.recentFiles')}</h4>
+                        <button 
+                            onClick={handleClearRecentFiles}
+                            className="text-xs text-zinc-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                            {t('app.clearRecent')}
+                        </button>
+                    </div>
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
                       {recentFiles.map((file) => (
-                        <button
+                        <div
                           key={file.filePath}
-                          onClick={() => navigate(`/note/${file.filePath}`)}
-                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 border-b last:border-0 border-zinc-100 dark:border-zinc-800 transition-colors group"
+                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 border-b last:border-0 border-zinc-100 dark:border-zinc-800 transition-colors group relative"
                         >
-                          <div className="p-1.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 group-hover:text-blue-500 transition-colors">
+                            <button
+                                onClick={() => navigate(`/note/${file.filePath}`)}
+                                className="absolute inset-0 z-0"
+                                aria-label={t('app.open')}
+                            />
+                          <div className="relative z-10 p-1.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 group-hover:text-blue-500 transition-colors pointer-events-none">
                             {/* Simple File Icon */}
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
                             <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">{file.title}</div>
                             <div className="text-xs text-zinc-400 truncate">{file.filePath}</div>
                           </div>
-                          <span className="text-xs text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity">{t('app.open')}</span>
-                        </button>
+                          <button
+                            onClick={(e) => handleRemoveRecentFile(e, file.filePath)}
+                            className="relative z-20 p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-all"
+                            title={t('app.removeRecent')}
+                          >
+                             <CloseIcon />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -943,6 +1000,8 @@ const MainLayout: React.FC = () => {
           document.body.style.userSelect = "none";
         }}
         onNoteContentLoad={handleUpdateNoteContent}
+        contextFiles={copilotContextFiles}
+        setContextFiles={setCopilotContextFiles}
       />
     </div>
   );

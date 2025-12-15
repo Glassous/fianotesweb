@@ -12,9 +12,26 @@ interface MarkdownRendererProps {
   content: string;
   isDark?: boolean;
   variant?: "document" | "chat";
+  onSelectionAction?: (text: string) => void;
 }
 
 // --- Icons ---
+const SparklesIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+    />
+  </svg>
+);
+
 const CopyIcon = () => (
   <svg
     className="w-4 h-4"
@@ -160,6 +177,33 @@ const PreBlock = ({ children, isDark }: { children: React.ReactNode; isDark: boo
   );
 };
 
+// --- Thinking Block Component ---
+const ThinkingBlock = ({ content, isDark }: { content: string; isDark: boolean }) => {
+  const { t } = useTranslation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  return (
+    <div className="my-3 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-zinc-50 dark:bg-zinc-900/50">
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left select-none"
+      >
+        <SparklesIcon />
+        <span className="flex-1">{t('copilot.thinkingProcess')}</span>
+        <ChevronDownIcon collapsed={isCollapsed} />
+      </button>
+      
+      <div
+        className={`transition-all duration-300 ease-in-out px-3 text-sm text-zinc-600 dark:text-zinc-400 font-mono overflow-hidden ${
+          isCollapsed ? "max-h-0 opacity-0" : "max-h-[500px] opacity-100 py-3 border-t border-zinc-200 dark:border-zinc-800 overflow-y-auto"
+        }`}
+      >
+        <div className="whitespace-pre-wrap opacity-80">{content}</div>
+      </div>
+    </div>
+  );
+};
+
 // --- Heading Helper ---
 const slugify = (text: string) => {
   return text
@@ -189,15 +233,60 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   isDark = false,
   variant = "document",
+  onSelectionAction,
 }) => {
+  const { t } = useTranslation();
   const containerClasses = variant === "document"
-    ? "markdown-body p-8 bg-white dark:bg-zinc-950 min-h-screen transition-colors duration-200 text-zinc-900 dark:text-zinc-100"
+    ? "markdown-body p-8 bg-white dark:bg-zinc-950 min-h-screen transition-colors duration-200 text-zinc-900 dark:text-zinc-100 relative"
     : "markdown-body bg-transparent text-zinc-800 dark:text-zinc-200 text-sm"; // Chat variant
+
+  const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('#fia-copilot-selection-btn')) return;
+        setSelectionMenu(null);
+    };
+    
+    if (selectionMenu) {
+        document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectionMenu]);
+
+  const handleMouseUp = () => {
+      if (!onSelectionAction || variant !== "document") return;
+      
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+          return; 
+      }
+      
+      const text = selection.toString().trim();
+      if (!text) return;
+      
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      setSelectionMenu({
+          x: rect.left + rect.width / 2,
+          y: rect.top - 8,
+          text: text
+      });
+  };
+
+  // Split content by <think> tags
+  // Regex matches <think> content </think>
+  // Also handle unclosed <think> tag if streaming
+  const parts = content.split(/(<think>[\s\S]*?<\/think>|<think>[\s\S]*)/g);
 
   return (
     // Updated colors to Zinc (black-gray)
     // Removed 'prose' (Tailwind Typography) and added 'markdown-body' (GitHub Markdown CSS)
-    <div className={containerClasses}>
+    <div className={containerClasses} onMouseUp={handleMouseUp}>
       <style>{`
         .markdown-body {
           background-color: transparent !important;
@@ -280,41 +369,82 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           background: #52525b;
         }
       `}</style>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
-        components={{
-          code: ({ className, children, ...props }: any) => {
-            const match = /language-(\w+)/.exec(className || "");
-            const isInline = !match && !String(children).includes("\n");
-            
-            if (isInline) {
-               return (
-                 <code className={className} {...props}>
-                   {children}
-                 </code>
-               )
-            }
-            
-            return (
-              <PreBlock isDark={isDark}>
-                 <code className={className} {...props}>
-                   {children}
-                 </code>
-              </PreBlock>
-            );
-          },
-          pre: ({ children }: any) => <>{children}</>,
-          h1: (props) => <Heading level={1} {...props} />,
-          h2: (props) => <Heading level={2} {...props} />,
-          h3: (props) => <Heading level={3} {...props} />,
-          h4: (props) => <Heading level={4} {...props} />,
-          h5: (props) => <Heading level={5} {...props} />,
-          h6: (props) => <Heading level={6} {...props} />,
-        }}
-      >
-        {content}
-      </ReactMarkdown>
+
+      {parts.map((part, index) => {
+        if (part.startsWith("<think>")) {
+          // Extract content
+          let inner = part.replace("<think>", "");
+          if (inner.endsWith("</think>")) {
+            inner = inner.slice(0, -8);
+          }
+          return <ThinkingBlock key={index} content={inner} isDark={isDark} />;
+        }
+        
+        if (!part) return null;
+
+        return (
+          <ReactMarkdown
+            key={index}
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+            components={{
+              code: ({ className, children, ...props }: any) => {
+                const match = /language-(\w+)/.exec(className || "");
+                const isInline = !match && !String(children).includes("\n");
+                
+                if (isInline) {
+                   return (
+                     <code className={className} {...props}>
+                       {children}
+                     </code>
+                   )
+                }
+                
+                return (
+                  <PreBlock isDark={isDark}>
+                     <code className={className} {...props}>
+                       {children}
+                     </code>
+                  </PreBlock>
+                );
+              },
+              pre: ({ children }: any) => <>{children}</>,
+              h1: (props) => <Heading level={1} {...props} />,
+              h2: (props) => <Heading level={2} {...props} />,
+              h3: (props) => <Heading level={3} {...props} />,
+              h4: (props) => <Heading level={4} {...props} />,
+              h5: (props) => <Heading level={5} {...props} />,
+              h6: (props) => <Heading level={6} {...props} />,
+              a: ({ node, ...props }: any) => (
+                <a target="_blank" rel="noopener noreferrer" {...props} />
+              ),
+            }}
+          >
+            {part}
+          </ReactMarkdown>
+        );
+      })}
+
+      {selectionMenu && (
+        <button
+          id="fia-copilot-selection-btn"
+          onClick={(e) => {
+              e.stopPropagation();
+              onSelectionAction && onSelectionAction(selectionMenu.text);
+              setSelectionMenu(null);
+              window.getSelection()?.removeAllRanges();
+          }}
+          className="fixed z-50 flex items-center gap-2 px-3 py-1.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full shadow-lg hover:scale-105 transition-transform animate-in fade-in zoom-in duration-200 cursor-pointer"
+          style={{
+              left: selectionMenu.x,
+              top: selectionMenu.y,
+              transform: 'translate(-50%, -100%)'
+          }}
+        >
+          <SparklesIcon />
+          <span className="text-xs font-semibold whitespace-nowrap">{t('app.askCopilot')}</span>
+        </button>
+      )}
     </div>
   );
 };

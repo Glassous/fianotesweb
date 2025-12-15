@@ -238,6 +238,8 @@ interface CopilotSidebarProps {
   onResizeStart?: (e: React.MouseEvent) => void;
   containerRef?: React.RefObject<HTMLElement>;
   onNoteContentLoad?: (filePath: string, content: string) => void;
+  contextFiles: RawNoteFile[];
+  setContextFiles: (files: RawNoteFile[]) => void;
 }
 
 export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
@@ -252,6 +254,8 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   onResizeStart,
   containerRef,
   onNoteContentLoad,
+  contextFiles: selectedContextFiles,
+  setContextFiles: setSelectedContextFiles,
 }) => {
   const { t } = useTranslation();
   const { 
@@ -268,7 +272,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
   const [input, setInput] = useState("");
   const [isSelectingFile, setIsSelectingFile] = useState(false);
-  const [selectedContextFiles, setSelectedContextFiles] = useState<RawNoteFile[]>([]);
+  // const [selectedContextFiles, setSelectedContextFiles] = useState<RawNoteFile[]>([]); // Lifted to App.tsx
   
   // Refs
   const messagesContainerRef = useRef<HTMLDivElement>(null);

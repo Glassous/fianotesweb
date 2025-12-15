@@ -19,9 +19,12 @@
     "askCopilot": "询问 Fia Copilot",
     "copilotHelp": "获取 AI 辅助笔记功能",
     "recentFiles": "最近打开",
+    "clearRecent": "清空记录",
+    "removeRecent": "移除",
     "open": "打开",
     "changeLanguage": "切换语言",
     "untitled": "无标题",
+    "selectedText": "选中的文本",
     "errorPrefix": "错误： "
   },
   "markdown": {
@@ -50,6 +53,7 @@
       "draft": "续写内容",
       "related": "查找相关笔记"
     },
+    "thinkingProcess": "思考过程",
     "newChat": "新对话",
     "history": "历史记录",
     "noHistory": "暂无历史记录",

@@ -58,9 +58,15 @@ export const streamChatCompletion = async (
       throw new Error(i18n.t("errors.openai.responseBodyNull"));
     }
 
+    let isThinking = false;
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
+        if (isThinking) {
+          onChunk("</think>");
+          isThinking = false;
+        }
         break;
       }
 
@@ -76,8 +82,23 @@ export const streamChatCompletion = async (
           const jsonStr = line.replace("data: ", "");
           try {
             const json = JSON.parse(jsonStr);
-            const content = json.choices[0]?.delta?.content || "";
+            const delta = json.choices[0]?.delta || {};
+            const content = delta.content || "";
+            const reasoning = delta.reasoning_content || "";
+
+            if (reasoning) {
+              if (!isThinking) {
+                onChunk("<think>");
+                isThinking = true;
+              }
+              onChunk(reasoning);
+            }
+
             if (content) {
+              if (isThinking) {
+                onChunk("</think>");
+                isThinking = false;
+              }
               onChunk(content);
             }
           } catch (e) {
