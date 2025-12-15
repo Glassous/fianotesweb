@@ -2,13 +2,13 @@
 
 [English Version](./README.md)
 
-Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面展示您的 Markdown 笔记。它具有 AI 辅助（Copilot）、语法高亮以及与 GitHub 无缝集成进行笔记存储的功能。
+Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面展示您的 Markdown 笔记。它具有 AI 辅助（Copilot）、语法高亮以及与 GitHub 无缝集成进行实时笔记存储和检索的功能。
 
 ## 功能特性
 
+- **实时 GitHub 集成**：直接使用 GitHub API 从私有或公共 GitHub 仓库获取并渲染笔记。内容更新无需构建步骤。
 - **Markdown 渲染**：全面支持 GFM（GitHub Flavored Markdown）、数学公式（KaTeX）和代码语法高亮。
 - **AI Copilot**：集成由 OpenAI 驱动的 AI 助手（可配置），帮助您总结、解释或扩展笔记内容。
-- **GitHub 集成**：自动从私有或公开的 GitHub 仓库中获取并渲染笔记。
 - **响应式设计**：针对桌面和移动设备进行了优化。
 - **快速且现代**：基于 React、Vite 和 TypeScript 构建。
 
@@ -38,7 +38,9 @@ Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面�
 | `NOTES_PAT` | 用于访问笔记仓库的 GitHub 个人访问令牌（Personal Access Token），需要 repo 权限。 | 是 |
 | `VITE_OPENAI_BASE_URL` | OpenAI API 的基础 URL（默认：`https://api.openai.com/v1`）。 | 否 |
 | `VITE_OPENAI_API_KEY` | 用于 Copilot 功能的 OpenAI API 密钥。 | 否 |
-| `VITE_OPENAI_MODEL` | 使用的 AI 模型（例如：`gpt-5.2`）。 | 否 |
+| `VITE_OPENAI_MODEL` | 使用的 AI 模型（默认：`gpt-5`）。 | 否 |
+
+*注意：如果未提供 `VITE_OPENAI_BASE_URL` 或 `VITE_OPENAI_MODEL`，它们将分别默认为 OpenAI 的官方 API 和 `gpt-5`。*
 
 ## 本地开发
 
@@ -58,15 +60,9 @@ Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面�
    ```bash
    cp .env.example .env.local
    ```
-   编辑 `.env.local` 并添加您的 `NOTES_REPO_PATH` 和 `NOTES_PAT`。
+   编辑 `.env.local` 并添加您的 `NOTES_REPO_PATH`、`NOTES_PAT` 以及可选的 OpenAI 配置。
 
-4. **获取笔记**
-   运行扫描脚本，将您的笔记仓库克隆到本地 `content` 目录并生成清单：
-   ```bash
-   npm run scan
-   ```
-
-5. **启动开发服务器**
+4. **启动开发服务器**
    ```bash
    npm run dev
    ```
@@ -74,7 +70,21 @@ Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面�
 
 ## 部署
 
-由于 Fianotes Web 是一个静态 Web 应用程序，它在构建时生成内容，因此您可以将其部署到任何静态托管提供商。构建过程需要获取您的笔记，因此环境变量必须在构建期间可用。
+由于 Fianotes Web 通过 GitHub API 实时获取您的笔记，因此在更新笔记时无需重新构建应用程序。
+
+### 本地部署
+
+要在本地运行生产就绪版本：
+
+1.  **构建应用程序**：
+    ```bash
+    npm run build
+    ```
+2.  **本地预览**：
+    ```bash
+    npm run preview
+    ```
+    或者使用任何静态文件服务器（例如 `serve`、`nginx`）提供 `dist` 文件夹服务。
 
 ### GitHub Pages
 
@@ -85,7 +95,9 @@ Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面�
 3. 添加以下仓库密钥（Repository secrets）：
    - `NOTES_REPO_PATH`
    - `NOTES_PAT`
-   - `VITE_OPENAI_API_KEY`（可选，如果使用 AI 功能）
+   - `VITE_OPENAI_API_KEY`（可选）
+   - `VITE_OPENAI_BASE_URL`（可选）
+   - `VITE_OPENAI_MODEL`（可选）
 4. 创建一个名为 `.github/workflows/deploy.yml` 的文件，内容如下：
 
 ```yaml
@@ -121,14 +133,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Scan and Build
+      - name: Build
         env:
           NOTES_REPO_PATH: ${{ secrets.NOTES_REPO_PATH }}
           NOTES_PAT: ${{ secrets.NOTES_PAT }}
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
-        run: |
-          npm run scan
-          npm run build
+          VITE_OPENAI_BASE_URL: ${{ secrets.VITE_OPENAI_BASE_URL }}
+          VITE_OPENAI_MODEL: ${{ secrets.VITE_OPENAI_MODEL }}
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -156,12 +168,14 @@ jobs:
 3. 选择您的仓库。
 4. 配置构建设置：
    - **Framework preset**（框架预设）：Vite
-   - **Build command**（构建命令）：`npm run scan && npm run build`
+   - **Build command**（构建命令）：`npm run build`
    - **Build output directory**（构建输出目录）：`dist`
 5. 在 **Environment variables**（环境变量）下，添加：
    - `NOTES_REPO_PATH`
    - `NOTES_PAT`
    - `VITE_OPENAI_API_KEY`
+   - `VITE_OPENAI_BASE_URL`（可选）
+   - `VITE_OPENAI_MODEL`（可选）
 6. 点击 **Save and Deploy**。
 
 ### Vercel
@@ -171,12 +185,14 @@ jobs:
 3. 在 **Configure Project**（配置项目）步骤中：
    - **Framework Preset**（框架预设）：Vite
    - **Root Directory**（根目录）：`./`
-   - **Build Command**（构建命令）：开启覆盖（Override）并设置为：`npm run scan && npm run build`
+   - **Build Command**（构建命令）：`npm run build`
    - **Output Directory**（输出目录）：`dist`
 4. 展开 **Environment Variables**（环境变量）并添加：
    - `NOTES_REPO_PATH`
    - `NOTES_PAT`
    - `VITE_OPENAI_API_KEY`
+   - `VITE_OPENAI_BASE_URL`（可选）
+   - `VITE_OPENAI_MODEL`（可选）
 5. 点击 **Deploy**。
 
 ## 许可证

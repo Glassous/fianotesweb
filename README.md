@@ -2,13 +2,13 @@
 
 [中文版](./README_zh-CN.md)
 
-Fianotes Web is a self-hosted, web-based note-taking platform designed to render your Markdown notes with a beautiful interface. It features AI-powered assistance (Copilot), syntax highlighting, and seamless integration with GitHub for note storage.
+Fianotes Web is a self-hosted, web-based note-taking platform designed to render your Markdown notes with a beautiful interface. It features AI-powered assistance (Copilot), syntax highlighting, and seamless integration with GitHub for real-time note storage and retrieval.
 
 ## Features
 
+- **Real-time GitHub Integration**: Directly fetches and renders notes from a private or public GitHub repository using the GitHub API. No build steps required for content updates.
 - **Markdown Rendering**: Full support for GFM (GitHub Flavored Markdown), math equations (KaTeX), and syntax highlighting.
 - **AI Copilot**: Integrated AI assistant powered by OpenAI (configurable) to help you summarize, explain, or expand on your notes.
-- **GitHub Integration**: Automatically fetches and renders notes from a private or public GitHub repository.
 - **Responsive Design**: optimized for both desktop and mobile viewing.
 - **Fast & Modern**: Built with React, Vite, and TypeScript.
 
@@ -38,7 +38,9 @@ The application is configured using environment variables. You can set these in 
 | `NOTES_PAT` | A GitHub Personal Access Token with repo scope to access the notes repository. | Yes |
 | `VITE_OPENAI_BASE_URL` | Base URL for the OpenAI API (default: `https://api.openai.com/v1`). | No |
 | `VITE_OPENAI_API_KEY` | Your OpenAI API Key for the Copilot feature. | No |
-| `VITE_OPENAI_MODEL` | The AI model to use (e.g., `gpt-5.2`). | No |
+| `VITE_OPENAI_MODEL` | The AI model to use (default: `gpt-5`). | No |
+
+*Note: If `VITE_OPENAI_BASE_URL` or `VITE_OPENAI_MODEL` are not provided, they will default to OpenAI's official API and `gpt-5` respectively.*
 
 ## Local Development
 
@@ -58,15 +60,9 @@ The application is configured using environment variables. You can set these in 
    ```bash
    cp .env.example .env.local
    ```
-   Edit `.env.local` and add your `NOTES_REPO_PATH` and `NOTES_PAT`.
+   Edit `.env.local` and add your `NOTES_REPO_PATH`, `NOTES_PAT`, and optional OpenAI configurations.
 
-4. **Fetch Notes**
-   Run the scan script to clone your notes repository into the local `content` directory and generate the manifest:
-   ```bash
-   npm run scan
-   ```
-
-5. **Start Development Server**
+4. **Start Development Server**
    ```bash
    npm run dev
    ```
@@ -74,7 +70,21 @@ The application is configured using environment variables. You can set these in 
 
 ## Deployment
 
-Since Fianotes Web is a static web application that builds its content at build time, you can deploy it to any static hosting provider. The build process requires fetching your notes, so environment variables must be available during the build.
+Since Fianotes Web fetches your notes in real-time via the GitHub API, you don't need to rebuild the application when you update your notes.
+
+### Local Deployment
+
+To run a production-ready version locally:
+
+1.  **Build the application**:
+    ```bash
+    npm run build
+    ```
+2.  **Preview locally**:
+    ```bash
+    npm run preview
+    ```
+    Or serve the `dist` folder using any static file server (e.g., `serve`, `nginx`).
 
 ### GitHub Pages
 
@@ -85,7 +95,9 @@ To deploy to GitHub Pages, you can use GitHub Actions.
 3. Add the following repository secrets:
    - `NOTES_REPO_PATH`
    - `NOTES_PAT`
-   - `VITE_OPENAI_API_KEY` (Optional, if using AI features)
+   - `VITE_OPENAI_API_KEY` (Optional)
+   - `VITE_OPENAI_BASE_URL` (Optional)
+   - `VITE_OPENAI_MODEL` (Optional)
 4. Create a file named `.github/workflows/deploy.yml` with the following content:
 
 ```yaml
@@ -121,14 +133,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Scan and Build
+      - name: Build
         env:
           NOTES_REPO_PATH: ${{ secrets.NOTES_REPO_PATH }}
           NOTES_PAT: ${{ secrets.NOTES_PAT }}
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
-        run: |
-          npm run scan
-          npm run build
+          VITE_OPENAI_BASE_URL: ${{ secrets.VITE_OPENAI_BASE_URL }}
+          VITE_OPENAI_MODEL: ${{ secrets.VITE_OPENAI_MODEL }}
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -156,12 +168,14 @@ jobs:
 3. Select your repository.
 4. Configure the build settings:
    - **Framework preset**: Vite
-   - **Build command**: `npm run scan && npm run build`
+   - **Build command**: `npm run build`
    - **Build output directory**: `dist`
 5. Under **Environment variables**, add:
    - `NOTES_REPO_PATH`
    - `NOTES_PAT`
    - `VITE_OPENAI_API_KEY`
+   - `VITE_OPENAI_BASE_URL` (Optional)
+   - `VITE_OPENAI_MODEL` (Optional)
 6. Click **Save and Deploy**.
 
 ### Vercel
@@ -171,12 +185,14 @@ jobs:
 3. In the **Configure Project** step:
    - **Framework Preset**: Vite
    - **Root Directory**: `./`
-   - **Build Command**: Turn on the override and set it to: `npm run scan && npm run build`
+   - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
 4. Expand **Environment Variables** and add:
    - `NOTES_REPO_PATH`
    - `NOTES_PAT`
    - `VITE_OPENAI_API_KEY`
+   - `VITE_OPENAI_BASE_URL` (Optional)
+   - `VITE_OPENAI_MODEL` (Optional)
 5. Click **Deploy**.
 
 ## License
