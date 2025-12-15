@@ -1,0 +1,88 @@
+{
+  "app": {
+    "title": "FiaNotes",
+    "loading": "Loading...",
+    "preview": "Preview",
+    "source": "Source",
+    "words": "words",
+    "closeSidebar": "Close Sidebar",
+    "openSidebar": "Open Sidebar",
+    "closeFile": "Close file",
+    "copilot": "Fia Copilot",
+    "theme": {
+      "light": "Light Mode",
+      "dark": "Dark Mode",
+      "system": "System Theme"
+    },
+    "welcomeTitle": "Welcome to FiaNotes",
+    "welcomeSubtitle": "Select a note to begin reading.",
+    "askCopilot": "Ask Fia Copilot",
+    "copilotHelp": "Get AI assistance with your notes",
+    "recentFiles": "Recently Opened",
+    "open": "Open",
+    "changeLanguage": "Change Language",
+    "untitled": "Untitled",
+    "errorPrefix": "Error: "
+  },
+  "markdown": {
+    "copy": "Copy",
+    "copied": "Copied!",
+    "copyCode": "Copy code",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "outline": {
+    "noHeadings": "No headings found"
+  },
+  "sidebar": {
+    "files": "Files",
+    "outline": "Outline",
+    "searchPlaceholder": "Search notes...",
+    "refreshList": "Refresh list",
+    "noResults": "No matching notes found."
+  },
+  "copilot": {
+    "welcomeTitle": "Hi, I'm Fia Copilot",
+    "welcomeSubtitle": "I can help you analyze notes, answer questions, and generate ideas.",
+    "suggestions": {
+      "summarize": "Summarize this note",
+      "concepts": "Explain key concepts",
+      "draft": "Draft a continuation",
+      "related": "Find related notes"
+    },
+    "newChat": "New Chat",
+    "history": "History",
+    "noHistory": "No history yet",
+    "untitledChat": "Untitled Chat",
+    "deleteConfirmTitle": "Delete Chat History?",
+    "deleteConfirmText": "This action cannot be undone.",
+    "selectFile": "Select File",
+    "uploadLocal": "Upload Local File",
+    "searchFiles": "Search files...",
+    "noMatchingFiles": "No matching files",
+    "addCurrentFile": "Add current file: ",
+    "inputPlaceholder": "Ask anything...",
+    "downloading": "Downloading file content...",
+    "errorPrefix": "**Error:** "
+  },
+  "errors": {
+    "openai": {
+      "apiKeyMissing": "OpenAI API Key is missing. Please set VITE_OPENAI_API_KEY.",
+      "apiError": "API Error: {{statusText}}",
+      "responseBodyNull": "Response body is null"
+    },
+    "github": {
+      "repoNotConfigured": "GitHub Repository Path not configured",
+      "fetchRepoInfoFailed": "Failed to fetch repo info: {{status}} {{text}}",
+      "fetchTreeFailed": "Failed to fetch file tree: {{status}} {{text}}",
+      "fetchContentFailed": "Failed to fetch content"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "back": "Back",
+    "copy": "Copy",
+    "regenerate": "Regenerate"
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { RawNoteFile, FileSystemNode, FolderItem, ChatSession } from "../types";
 import { ChatMessage } from "../services/openai";
 import { fetchNoteContent } from "../services/github";
@@ -252,6 +253,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   containerRef,
   onNoteContentLoad,
 }) => {
+  const { t } = useTranslation();
   const { 
     sessions, 
     currentSessionId, 
@@ -443,7 +445,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
   const deleteSession = (e: React.MouseEvent, id: string) => {
       e.stopPropagation();
-      if (confirm("Delete this chat?")) {
+      if (confirm(t('copilot.deleteConfirmTitle'))) {
           hookDeleteSession(id);
       }
   };
@@ -566,12 +568,12 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
             {showHistory ? (
                 <button onClick={() => setShowHistory(false)} className="hover:text-blue-500 flex items-center gap-1">
                     <ChevronLeftIcon />
-                    <span>Back</span>
+                    <span>{t('common.back')}</span>
                 </button>
             ) : (
                 <>
                     <SparklesIcon />
-                    <span>Fia Copilot</span>
+                    <span>{t('app.copilot')}</span>
                 </>
             )}
           </div>
@@ -582,7 +584,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                         <button
                         onClick={handleNewChat}
                         className="p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors"
-                        title="New Chat"
+                        title={t('copilot.newChat')}
                         >
                         <PlusIcon />
                         </button>
@@ -590,7 +592,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                     <button
                     onClick={() => setShowHistory(true)}
                     className="p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors"
-                    title="History"
+                    title={t('copilot.history')}
                     >
                     <HistoryIcon />
                     </button>
@@ -611,7 +613,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                 // History List
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                     {sessions.length === 0 ? (
-                        <div className="text-center text-zinc-400 mt-10 text-sm">No history yet</div>
+                        <div className="text-center text-zinc-400 mt-10 text-sm">{t('copilot.noHistory')}</div>
                     ) : (
                         sessions.map(session => (
                             <div 
@@ -620,7 +622,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                 className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${currentSessionId === session.id ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
                             >
                                 <div className="flex flex-col min-w-0">
-                                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">{session.title || "Untitled Chat"}</span>
+                                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">{session.title || t('copilot.untitledChat')}</span>
                                     <span className="text-xs text-zinc-400">{new Date(session.timestamp).toLocaleDateString()}</span>
                                 </div>
                                 <button 
@@ -658,19 +660,19 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                 
                                 <div className="space-y-2 max-w-[260px]">
                                     <h3 className="font-semibold text-zinc-800 dark:text-zinc-100 text-lg">
-                                        Hi, I'm Fia Copilot
+                                        {t('copilot.welcomeTitle')}
                                     </h3>
                                     <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                        I can help you analyze notes, answer questions, and generate ideas.
+                                        {t('copilot.welcomeSubtitle')}
                                     </p>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-2.5 w-full max-w-[240px]">
                                     {[
-                                        "Summarize this note",
-                                        "Explain key concepts", 
-                                        "Draft a continuation",
-                                        "Find related notes"
+                                        t('copilot.suggestions.summarize'),
+                                        t('copilot.suggestions.concepts'), 
+                                        t('copilot.suggestions.draft'),
+                                        t('copilot.suggestions.related')
                                     ].map((suggestion, i) => (
                                         <button
                                             key={i}
@@ -700,20 +702,20 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                             <button 
                                 onClick={() => handleCopy(msg.content)}
                                 className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                                title="Copy"
+                                title={t('common.copy')}
                             >
                                 <ClipboardIcon />
-                                <span>Copy</span>
+                                <span>{t('common.copy')}</span>
                             </button>
                             {idx === messages.length - 1 && (
                                 <button 
                                     onClick={regenerateLastResponse}
                                     disabled={isLoading}
                                     className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-blue-500 transition-colors disabled:opacity-50"
-                                    title="Regenerate"
+                                    title={t('common.regenerate')}
                                 >
                                     <RefreshIcon />
-                                    <span>Regenerate</span>
+                                    <span>{t('common.regenerate')}</span>
                                 </button>
                             )}
                         </div>
@@ -735,7 +737,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                      </svg>
-                                     Downloading file content...
+                                     {t('copilot.downloading')}
                                  </div>
                              </div>
                         )}
@@ -744,7 +746,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                         {isSelectingFile && (
                             <div className="absolute bottom-full left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.15)] z-20 flex flex-col max-h-[300px] rounded-t-xl animate-in slide-in-from-bottom-5 duration-200">
                                 <div className="p-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between shrink-0">
-                                    <span className="text-xs font-semibold uppercase text-zinc-500">Select File</span>
+                                    <span className="text-xs font-semibold uppercase text-zinc-500">{t('copilot.selectFile')}</span>
                                     <button onClick={() => setIsSelectingFile(false)} className="text-zinc-400 hover:text-zinc-600"><XMarkIcon /></button>
                                 </div>
                                 <div className="p-2 shrink-0 space-y-2">
@@ -758,12 +760,12 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                         onClick={() => fileInputRef.current?.click()}
                                         className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-md transition-colors border border-dashed border-zinc-300 dark:border-zinc-600"
                                     >
-                                        <span className="text-lg leading-none">+</span> Upload Local File
+                                        <span className="text-lg leading-none">+</span> {t('copilot.uploadLocal')}
                                     </button>
                                     {!fileTree && (
                                         <input 
                                             type="text" 
-                                            placeholder="Search files..." 
+                                            placeholder={t('copilot.searchFiles')} 
                                             className="w-full bg-zinc-100 dark:bg-zinc-800 border-none rounded-md px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
                                             value={fileSearch}
                                             onChange={e => setFileSearch(e.target.value)}
@@ -787,7 +789,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                             </button>
                                         ))}
                                         {filteredNotes.length === 0 && (
-                                            <div className="p-4 text-center text-zinc-400 text-xs">No matching files</div>
+                                            <div className="p-4 text-center text-zinc-400 text-xs">{t('copilot.noMatchingFiles')}</div>
                                         )}
                                         </>
                                     )}
@@ -802,7 +804,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                 className="flex items-center gap-1.5 mb-2 px-1 text-xs text-blue-600 dark:text-blue-400 hover:underline transition-colors w-full text-left"
                             >
                                 <PlusIcon />
-                                <span className="truncate">Add current file: {activeNote.filePath.split('/').pop()}</span>
+                                <span className="truncate">{t('copilot.addCurrentFile')} {activeNote.filePath.split('/').pop()}</span>
                             </button>
                         )}
 
@@ -835,7 +837,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="Ask anything..."
+                            placeholder={t('copilot.inputPlaceholder')}
                             className="flex-1 bg-transparent border-none focus:ring-0 outline-none resize-none max-h-32 min-h-[24px] py-1.5 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 leading-relaxed"
                             rows={1}
                             />
@@ -856,14 +858,14 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
             {deleteConfirmation.isOpen && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-[2px] p-4">
                     <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 p-4 w-full max-w-[280px] animate-in zoom-in-95 duration-200">
-                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Delete Chat History?</h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">This action cannot be undone.</p>
+                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">{t('copilot.deleteConfirmTitle')}</h3>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">{t('copilot.deleteConfirmText')}</p>
                         <div className="flex gap-2 justify-end">
                             <button 
                                 onClick={() => setDeleteConfirmation({ isOpen: false, sessionId: null })}
                                 className="px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-md transition-colors"
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </button>
                             <button 
                                 onClick={(e) => {
@@ -874,7 +876,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                 }}
                                 className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
                             >
-                                Delete
+                                {t('common.delete')}
                             </button>
                         </div>
                     </div>

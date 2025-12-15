@@ -1,4 +1,6 @@
 
+import i18n from "../i18n";
+
 const REPO_PATH = process.env.NOTES_REPO_PATH;
 const TOKEN = process.env.NOTES_PAT;
 
@@ -16,7 +18,7 @@ export interface GitHubTreeItem {
 }
 
 export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
-  if (!REPO_PATH) throw new Error("GitHub Repository Path not configured");
+  if (!REPO_PATH) throw new Error(i18n.t("errors.github.repoNotConfigured"));
   
   const headers: HeadersInit = {
     Accept: "application/vnd.github+json",
@@ -30,7 +32,7 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
   const repoRes = await fetch(`https://api.github.com/repos/${REPO_PATH}`, { headers });
   if (!repoRes.ok) {
       const errorText = await repoRes.text();
-      throw new Error(`Failed to fetch repo info: ${repoRes.status} ${errorText}`);
+      throw new Error(i18n.t("errors.github.fetchRepoInfoFailed", { status: repoRes.status, text: errorText }));
   }
   const repoData = await repoRes.json();
   const defaultBranch = repoData.default_branch;
@@ -43,7 +45,7 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
   
   if (!treeRes.ok) {
       const errorText = await treeRes.text();
-      throw new Error(`Failed to fetch file tree: ${treeRes.status} ${errorText}`);
+      throw new Error(i18n.t("errors.github.fetchTreeFailed", { status: treeRes.status, text: errorText }));
   }
   
   const treeData = await treeRes.json();
@@ -74,6 +76,6 @@ export const fetchNoteContent = async (url: string): Promise<string> => {
   }
 
   const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error("Failed to fetch content");
+  if (!res.ok) throw new Error(i18n.t("errors.github.fetchContentFailed"));
   return await res.text();
 };

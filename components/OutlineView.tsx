@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { OutlineItem } from "../types";
 
 interface OutlineViewProps {
@@ -72,10 +73,11 @@ const OutlineNode: React.FC<OutlineNodeProps> = ({ item, onHeadingClick }) => {
 };
 
 export const OutlineView: React.FC<OutlineViewProps> = ({ items, onHeadingClick }) => {
+  const { t } = useTranslation();
   if (items.length === 0) {
     return (
       <div className="p-4 text-sm text-zinc-400 text-center">
-        No headings found
+        {t('outline.noHeadings')}
       </div>
     );
   }

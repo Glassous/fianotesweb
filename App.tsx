@@ -7,6 +7,7 @@ import {
   useParams,
   useLocation,
 } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Sidebar } from "./components/Sidebar";
 import { CopilotSidebar } from "./components/CopilotSidebar";
 import { MarkdownRenderer } from "./components/MarkdownRenderer";
@@ -131,6 +132,22 @@ const SparklesIcon = () => (
   </svg>
 );
 
+const LanguageIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+    />
+  </svg>
+);
+
 type ThemeMode = "system" | "light" | "dark";
 
 // Helper to determine language from extension
@@ -172,6 +189,7 @@ interface RecentFile {
 }
 
 const MainLayout: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const params = useParams();
   const location = useLocation();
@@ -183,6 +201,27 @@ const MainLayout: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoverOpen, setHoverOpen] = useState(false); // For edge hover
   const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // --- Language Switcher State ---
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const langMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
+        setIsLangMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+    setIsLangMenuOpen(false);
+  };
 
   // --- Resize State (Desktop Only) ---
   const [sidebarWidth, setSidebarWidth] = useState(288);
@@ -398,7 +437,7 @@ const MainLayout: React.FC = () => {
       setRecentFiles((prev) => {
         const newItem: RecentFile = {
           filePath: currentNote.filePath,
-          title: currentNote.metadata?.title || currentNote.filePath.split("/").pop()?.replace(/\.md$/, "") || "Untitled",
+          title: currentNote.metadata?.title || currentNote.filePath.split("/").pop()?.replace(/\.md$/, "") || t('app.untitled'),
           timestamp: Date.now(),
         };
         // Remove existing entry for same file to avoid duplicates
@@ -559,12 +598,12 @@ const MainLayout: React.FC = () => {
         <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between shrink-0 h-16">
           <div>
             <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 tracking-tight">
-              FiaNotes
+              {t('app.title')}
             </h1>
             {isLoading && (
               <div className="flex items-center gap-2 mt-1">
                 <LoadingAnimation size="sm" color="bg-zinc-400" />
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">Loading...</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">{t('app.loading')}</span>
               </div>
             )}
           </div>
@@ -597,7 +636,7 @@ const MainLayout: React.FC = () => {
         {/* Render New Sidebar Component */}
         {error && (
           <div className="p-4 text-sm text-red-500 bg-red-50 dark:bg-red-900/10 border-b border-red-100 dark:border-red-900/20">
-            Error: {error}
+            {t('app.errorPrefix')}{error}
           </div>
         )}
         
@@ -639,7 +678,7 @@ const MainLayout: React.FC = () => {
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 mr-4 -ml-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 focus:outline-none transition-colors"
-              title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+              title={isSidebarOpen ? t('app.closeSidebar') : t('app.openSidebar')}
             >
               {isSidebarOpen ? <CloseIcon /> : <MenuIcon />}
             </button>
@@ -658,14 +697,14 @@ const MainLayout: React.FC = () => {
                 <button
                   onClick={() => navigate("/")}
                   className="ml-2 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
-                  title="Close file"
+                  title={t('app.closeFile')}
                 >
                   <CloseIcon />
                 </button>
               </>
             ) : (
               <span className="text-zinc-500 dark:text-zinc-400 font-medium">
-                FiaNotes
+                {t('app.title')}
               </span>
             )}
           </div>
@@ -682,7 +721,7 @@ const MainLayout: React.FC = () => {
                       : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   }`}
                 >
-                  Preview
+                  {t('app.preview')}
                 </button>
                 <button
                   onClick={() => setViewMode("source")}
@@ -692,7 +731,7 @@ const MainLayout: React.FC = () => {
                       : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   }`}
                 >
-                  Source
+                  {t('app.source')}
                 </button>
               </div>
             )}
@@ -706,7 +745,7 @@ const MainLayout: React.FC = () => {
                   </span>
                 )}
                 <span className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md transition-colors">
-                  {wordCount} words
+                  {wordCount} {t('app.words')}
                 </span>
               </div>
             )}
@@ -719,16 +758,44 @@ const MainLayout: React.FC = () => {
                   ? "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30" 
                   : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
               }`}
-              title="Fia Copilot"
+              title={t('app.copilot')}
             >
               <SparklesIcon />
             </button>
+
+            {/* Language Switcher */}
+            <div className="relative" ref={langMenuRef}>
+              <button
+                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                title={t('app.changeLanguage')}
+              >
+                <LanguageIcon />
+              </button>
+              
+              {isLangMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50">
+                  <button
+                    onClick={() => changeLanguage('zh-CN')}
+                    className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-CN' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                  >
+                    简体中文
+                  </button>
+                  <button
+                    onClick={() => changeLanguage('en-US')}
+                    className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'en-US' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                  >
+                    English
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Theme Toggle Button */}
             <button
               onClick={cycleTheme}
               className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
-              title={`Theme: ${themeMode.charAt(0).toUpperCase() + themeMode.slice(1)}`}
+              title={`${t('app.theme.' + themeMode)}`}
             >
               {themeMode === "light" && <SunIcon />}
               {themeMode === "dark" && <MoonIcon />}
@@ -805,8 +872,8 @@ const MainLayout: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Welcome to FiaNotes</h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Select a note to begin reading or writing.</p>
+                <h3 className="text-xl font-semibold text-zinc-700 dark:text-zinc-300 mb-2">{t('app.welcomeTitle')}</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">{t('app.welcomeSubtitle')}</p>
               </div>
 
               <div className="grid gap-6 w-full max-w-lg">
@@ -820,8 +887,8 @@ const MainLayout: React.FC = () => {
                       <SparklesIcon />
                     </div>
                     <div>
-                      <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">Ask Fia Copilot</span>
-                      <span className="block text-xs text-zinc-500 mt-1">Get AI assistance with your notes</span>
+                      <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">{t('app.askCopilot')}</span>
+                      <span className="block text-xs text-zinc-500 mt-1">{t('app.copilotHelp')}</span>
                     </div>
                   </button>
                 </div>
@@ -829,7 +896,7 @@ const MainLayout: React.FC = () => {
                 {/* Recent Files */}
                 {recentFiles.length > 0 && (
                   <div className="w-full">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3 ml-1">Recently Opened</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3 ml-1">{t('app.recentFiles')}</h4>
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
                       {recentFiles.map((file) => (
                         <button
@@ -847,7 +914,7 @@ const MainLayout: React.FC = () => {
                             <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">{file.title}</div>
                             <div className="text-xs text-zinc-400 truncate">{file.filePath}</div>
                           </div>
-                          <span className="text-xs text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity">Open</span>
+                          <span className="text-xs text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity">{t('app.open')}</span>
                         </button>
                       ))}
                     </div>

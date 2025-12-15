@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { FileSystemNode, FolderItem, NoteItem, OutlineItem } from "../types";
 import { OutlineView } from "./OutlineView";
 import { FolderIcon, getFileIcon } from "./FileIcons";
@@ -167,6 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTabChange,
   onHeadingClick,
 }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
 
   // Flatten logic when searching
@@ -189,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
               }`}
             >
-              Files
+              {t('sidebar.files')}
             </button>
             <button
               onClick={() => onTabChange && onTabChange("outline")}
@@ -199,7 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
               }`}
             >
-              Outline
+              {t('sidebar.outline')}
             </button>
           </div>
         </div>
@@ -216,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <input
               type="text"
               className="block w-full pl-9 pr-8 py-1.5 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 placeholder-zinc-400"
-              placeholder="Search notes..."
+              placeholder={t('sidebar.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -233,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={onRefresh}
               className="p-1.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-              title="Refresh list"
+              title={t('sidebar.refreshList')}
               disabled={isLoading}
             >
               <RefreshIcon spinning={isLoading} />
@@ -254,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="space-y-1">
               {filteredResults.length === 0 ? (
                 <div className="text-center py-8 text-sm text-zinc-500 dark:text-zinc-500">
-                  No matching notes found.
+                  {t('sidebar.noResults')}
                 </div>
               ) : (
                 filteredResults.map((file) => (

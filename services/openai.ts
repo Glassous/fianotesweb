@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -26,7 +28,7 @@ export const streamChatCompletion = async (
   const config = getOpenAIConfig();
 
   if (!config.apiKey) {
-    onError(new Error("OpenAI API Key is missing. Please set VITE_OPENAI_API_KEY."));
+    onError(new Error(i18n.t("errors.openai.apiKeyMissing")));
     return;
   }
 
@@ -46,14 +48,14 @@ export const streamChatCompletion = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API Error: ${response.statusText}`);
+      throw new Error(errorData.error?.message || i18n.t("errors.openai.apiError", { statusText: response.statusText }));
     }
 
     const reader = response.body?.getReader();
     const decoder = new TextDecoder("utf-8");
 
     if (!reader) {
-      throw new Error("Response body is null");
+      throw new Error(i18n.t("errors.openai.responseBodyNull"));
     }
 
     while (true) {

@@ -1,0 +1,88 @@
+{
+  "app": {
+    "title": "FiaNotes",
+    "loading": "加载中...",
+    "preview": "预览",
+    "source": "源码",
+    "words": "字",
+    "closeSidebar": "关闭侧边栏",
+    "openSidebar": "打开侧边栏",
+    "closeFile": "关闭文件",
+    "copilot": "Fia Copilot",
+    "theme": {
+      "light": "浅色模式",
+      "dark": "深色模式",
+      "system": "跟随系统"
+    },
+    "welcomeTitle": "欢迎使用 FiaNotes",
+    "welcomeSubtitle": "选择一个笔记开始阅读。",
+    "askCopilot": "询问 Fia Copilot",
+    "copilotHelp": "获取 AI 辅助笔记功能",
+    "recentFiles": "最近打开",
+    "open": "打开",
+    "changeLanguage": "切换语言",
+    "untitled": "无标题",
+    "errorPrefix": "错误： "
+  },
+  "markdown": {
+    "copy": "复制",
+    "copied": "已复制！",
+    "copyCode": "复制代码",
+    "expand": "展开",
+    "collapse": "折叠"
+  },
+  "outline": {
+    "noHeadings": "未找到标题"
+  },
+  "sidebar": {
+    "files": "文件",
+    "outline": "大纲",
+    "searchPlaceholder": "搜索笔记...",
+    "refreshList": "刷新列表",
+    "noResults": "未找到匹配的笔记。"
+  },
+  "copilot": {
+    "welcomeTitle": "你好，我是 Fia Copilot",
+    "welcomeSubtitle": "我可以帮你分析笔记，回答问题，以及产生新点子。",
+    "suggestions": {
+      "summarize": "总结这篇笔记",
+      "concepts": "解释关键概念",
+      "draft": "续写内容",
+      "related": "查找相关笔记"
+    },
+    "newChat": "新对话",
+    "history": "历史记录",
+    "noHistory": "暂无历史记录",
+    "untitledChat": "未命名对话",
+    "deleteConfirmTitle": "删除聊天记录？",
+    "deleteConfirmText": "此操作无法撤销。",
+    "selectFile": "选择文件",
+    "uploadLocal": "上传本地文件",
+    "searchFiles": "搜索文件...",
+    "noMatchingFiles": "没有匹配的文件",
+    "addCurrentFile": "添加当前文件：",
+    "inputPlaceholder": "问点什么...",
+    "downloading": "正在下载文件内容...",
+    "errorPrefix": "**错误：** "
+  },
+  "errors": {
+    "openai": {
+      "apiKeyMissing": "OpenAI API Key 缺失。请设置 VITE_OPENAI_API_KEY。",
+      "apiError": "API 错误：{{statusText}}",
+      "responseBodyNull": "响应体为空"
+    },
+    "github": {
+      "repoNotConfigured": "GitHub 仓库路径未配置",
+      "fetchRepoInfoFailed": "获取仓库信息失败：{{status}} {{text}}",
+      "fetchTreeFailed": "获取文件树失败：{{status}} {{text}}",
+      "fetchContentFailed": "获取内容失败"
+    }
+  },
+  "common": {
+    "cancel": "取消",
+    "delete": "删除",
+    "back": "返回",
+    "copy": "复制",
+    "regenerate": "重新生成"
+  }
+}

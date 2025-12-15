@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { ChatMessage, streamChatCompletion } from "../services/openai";
 import { ChatSession, RawNoteFile } from "../types";
 
@@ -22,6 +23,7 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -189,7 +191,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       (err) => {
         console.error(err);
-        const errorMsg = `\n\n**Error:** ${err.message}`;
+        const errorMsg = `\n\n${t('copilot.errorPrefix')}${err.message}`;
         assistantContent += errorMsg;
         
         // Final update for error
@@ -275,7 +277,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       () => setIsLoading(false),
       (err) => {
         console.error(err);
-        const errorMsg = `\n\n**Error:** ${err.message}`;
+        const errorMsg = `\n\n${t('copilot.errorPrefix')}${err.message}`;
         assistantContent += errorMsg;
         setMessages(prev => {
             const updated = [...prev];
