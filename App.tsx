@@ -10,6 +10,7 @@ import {
 import { Sidebar } from "./components/Sidebar";
 import { CopilotSidebar } from "./components/CopilotSidebar";
 import { MarkdownRenderer } from "./components/MarkdownRenderer";
+import { CodeViewer } from "./components/CodeViewer";
 import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
 import { MOCK_NOTES } from "./constants";
@@ -131,6 +132,38 @@ const StarIcon = () => (
 
 type ThemeMode = "system" | "light" | "dark";
 
+// Helper to determine language from extension
+const getLanguageFromExtension = (filePath: string): string | null => {
+  const ext = filePath.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "c": return "c";
+    case "cpp": case "h": case "hpp": return "cpp";
+    case "java": return "java";
+    case "py": return "python";
+    case "js": case "jsx": return "javascript";
+    case "ts": case "tsx": return "typescript";
+    case "sql": return "sql";
+    case "css": return "css";
+    case "json": return "json";
+    case "go": return "go";
+    case "rs": return "rust";
+    case "sh": return "bash";
+    case "yaml": case "yml": return "yaml";
+    case "xml": return "xml";
+    case "kt": case "kts": return "kotlin";
+    case "php": return "php";
+    case "rb": return "ruby";
+    case "cs": return "csharp";
+    case "swift": return "swift";
+    case "lua": return "lua";
+    case "r": return "r";
+    case "dart": return "dart";
+    case "bat": case "cmd": return "batch";
+    case "ps1": return "powershell";
+    default: return null;
+  }
+};
+
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
@@ -218,6 +251,9 @@ const MainLayout: React.FC = () => {
   // Outline State
   const [sidebarTab, setSidebarTab] = useState<"files" | "outline">("files");
   const [outlineItems, setOutlineItems] = useState<OutlineItem[]>([]);
+
+  // View Mode State (for HTML files)
+  const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
 
   // Initial Load
   const loadNotes = async () => {
@@ -415,6 +451,8 @@ const MainLayout: React.FC = () => {
     if (mainContentRef.current) {
       mainContentRef.current.scrollTop = 0;
     }
+    // Reset view mode to preview when file changes
+    setViewMode("preview");
   }, [activeFilePath]);
 
   // Word count calculation
@@ -582,6 +620,32 @@ const MainLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* HTML Preview Toggle */}
+            {currentNote && currentNote.filePath.endsWith(".html") && (
+              <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
+                <button
+                  onClick={() => setViewMode("preview")}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    viewMode === "preview"
+                      ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                  }`}
+                >
+                  Preview
+                </button>
+                <button
+                  onClick={() => setViewMode("source")}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    viewMode === "source"
+                      ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                  }`}
+                >
+                  Source
+                </button>
+              </div>
+            )}
+
             {/* Stats (Desktop) */}
             {currentNote && (
               <div className="flex items-center gap-4 text-xs font-medium text-zinc-500 dark:text-zinc-400 shrink-0 hidden sm:flex mr-2">
@@ -631,22 +695,42 @@ const MainLayout: React.FC = () => {
             <div className="w-full min-h-full">
               {/* Note: max-w-none is handled in MarkdownRenderer, removing container constraints here allows full width */}
               <div className="mx-auto w-full">
-                <MarkdownRenderer content={currentNote.content} isDark={isDarkMode} />
+                {currentNote.filePath.endsWith(".html") && viewMode === "preview" ? (
+                  <iframe
+                    srcDoc={currentNote.content}
+                    className="w-full h-[calc(100vh-4rem)] border-none bg-white"
+                    title="Preview"
+                  />
+                ) : (currentNote.filePath.endsWith(".html") && viewMode === "source") || getLanguageFromExtension(currentNote.filePath) ? (
+                   // Code Viewer for HTML Source and other code files
+                   <CodeViewer 
+                     content={currentNote.content} 
+                     language={currentNote.filePath.endsWith(".html") ? "xml" : getLanguageFromExtension(currentNote.filePath)!} 
+                     isDark={isDarkMode}
+                   />
+                ) : (
+                  <MarkdownRenderer 
+                    content={currentNote.content} 
+                    isDark={isDarkMode} 
+                  />
+                )}
               </div>
 
-              {/* Footer Metadata in Document Flow */}
-              <div className="p-8 max-w-4xl mx-auto border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-12 transition-colors">
-                <div className="flex flex-wrap gap-2">
-                  {currentNote.metadata?.tags?.map((tag: string) => (
-                    <span
-                      key={tag}
-                      className="text-xs font-mono bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/50"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
+              {/* Footer Metadata in Document Flow - Hide for code viewer unless we want it? usually code files don't need metadata footer */}
+              {(!getLanguageFromExtension(currentNote.filePath) || currentNote.filePath.endsWith(".html")) && (!currentNote.filePath.endsWith(".html") || viewMode === "source") && (
+                <div className="p-8 max-w-4xl mx-auto border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-12 transition-colors">
+                  <div className="flex flex-wrap gap-2">
+                    {currentNote.metadata?.tags?.map((tag: string) => (
+                      <span
+                        key={tag}
+                        className="text-xs font-mono bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/50"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : contentLoading ? (
             <div className="p-8 max-w-4xl mx-auto space-y-8 mt-8">

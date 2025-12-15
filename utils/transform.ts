@@ -75,11 +75,11 @@ export const buildFileTree = (rawFiles: RawNoteFile[]): FolderItem => {
 
       if (isFile) {
         // Remove .md extension for display if desired, or keep it
-        const name = part.replace(/\.md$/, "");
+        const name = part;
         const noteNode: NoteItem = {
           id: currentPath,
           path: currentPath,
-          name: file.metadata?.title || name, // Use Frontmatter title if available
+          name: name, // Use filename directly to show extension
           type: "file",
           content: file.content,
           metadata: file.metadata,

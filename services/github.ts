@@ -47,9 +47,20 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
   }
   
   const treeData = await treeRes.json();
-  // Filter only markdown files
+  // Filter markdown, html and code files
+  const allowedExtensions = [
+    ".md", ".html", 
+    ".c", ".cpp", ".h", ".hpp", ".java", 
+    ".py", ".js", ".jsx", ".ts", ".tsx", 
+    ".sql", ".css", ".json", ".go", ".rs", 
+    ".sh", ".yaml", ".yml", ".xml",
+    ".kt", ".kts", ".php", ".rb", ".cs",
+    ".swift", ".lua", ".r", ".dart",
+    ".bat", ".cmd", ".ps1"
+  ];
+  
   return treeData.tree.filter((item: GitHubTreeItem) => 
-    item.type === "blob" && item.path.endsWith(".md")
+    item.type === "blob" && allowedExtensions.some(ext => item.path.endsWith(ext))
   );
 };
 

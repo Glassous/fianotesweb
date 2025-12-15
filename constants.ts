@@ -27,4 +27,16 @@ export const MOCK_NOTES: RawNoteFile[] = [
       "# App Ideas\n\n- A specialized note taking app for architects.\n- A static site generator for notes.",
     metadata: { title: "Ideas" },
   },
+  {
+    filePath: "Demo/Page.html",
+    content:
+      "<!DOCTYPE html>\n<html>\n<head>\n<style>\nbody { font-family: sans-serif; color: #333; padding: 20px; }\nh1 { color: #007bff; }\n</style>\n</head>\n<body>\n<h1>Hello from HTML</h1>\n<p>This is a <strong>preview</strong> of an HTML file.</p>\n<button onclick=\"alert('It works!')\">Click Me</button>\n</body>\n</html>",
+    metadata: { title: "HTML Demo" },
+  },
+  {
+    filePath: "Demo/Code.cpp",
+    content:
+      "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, World!\" << std::endl;\n    return 0;\n}",
+    metadata: { title: "CPP Demo" },
+  },
 ];

@@ -59,8 +59,8 @@ async function buildNotesManifest() {
     return;
   }
 
-  // Find all .md files recursively
-  const files = await glob("**/*.md", { cwd: CONTENT_DIR });
+  // Find all .md, .html and code files recursively
+  const files = await glob("**/*.{md,html,c,cpp,h,hpp,java,py,js,jsx,ts,tsx,sql,css,json,go,rs,sh,yaml,yml,xml,kt,kts,php,rb,cs,swift,lua,r,dart,bat,cmd,ps1}", { cwd: CONTENT_DIR });
 
   const notesData = files.map((file) => {
     const fullPath = path.join(CONTENT_DIR, file);
