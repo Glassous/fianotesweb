@@ -1113,6 +1113,7 @@ const MainLayout: React.FC = () => {
                     content={currentNote.content} 
                     isDark={isDarkMode} 
                     onSelectionAction={handleAskCopilot}
+                    onInternalLinkClick={handleHeadingClick}
                   />
                 )}
               </div>

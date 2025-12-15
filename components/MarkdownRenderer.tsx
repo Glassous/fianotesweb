@@ -14,6 +14,7 @@ interface MarkdownRendererProps {
   isDark?: boolean;
   variant?: "document" | "chat";
   onSelectionAction?: (text: string) => void;
+  onInternalLinkClick?: (id: string) => void;
 }
 
 // --- Icons ---
@@ -270,6 +271,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   isDark = false,
   variant = "document",
   onSelectionAction,
+  onInternalLinkClick,
 }) => {
   const { t } = useTranslation();
   const containerClasses = variant === "document"
@@ -460,9 +462,28 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               h4: (props) => <Heading level={4} {...props} />,
               h5: (props) => <Heading level={5} {...props} />,
               h6: (props) => <Heading level={6} {...props} />,
-              a: ({ node, ...props }: any) => (
-                <a target="_blank" rel="noopener noreferrer" {...props} />
-              ),
+              a: ({ node, ...props }: any) => {
+                const href = props.href || "";
+                const isInternal = href.startsWith("#");
+                
+                if (isInternal) {
+                    return (
+                        <a 
+                            {...props} 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                const id = href.substring(1);
+                                onInternalLinkClick && onInternalLinkClick(id);
+                            }}
+                            className="cursor-pointer hover:underline text-blue-600 dark:text-blue-400"
+                        />
+                    );
+                }
+                
+                return (
+                  <a target="_blank" rel="noopener noreferrer" {...props} />
+                );
+              },
             }}
           >
             {part}
