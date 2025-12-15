@@ -16,6 +16,7 @@ interface ChatContextType {
   loadSession: (session: ChatSession) => void;
   clearCurrentSession: () => void;
   deleteSession: (sessionId: string) => void;
+  regenerateLastResponse: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -42,16 +43,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const savedId = localStorage.getItem(STORAGE_KEYS.CURRENT_SESSION_ID);
-      if (savedId) {
-        setCurrentSessionId(savedId);
-        currentSessionIdRef.current = savedId;
+      // Requirement: Do not restore the active session on reload. Start fresh.
+      // if (savedId) {
+      //   setCurrentSessionId(savedId);
+      //   currentSessionIdRef.current = savedId;
         
-        // Load messages for this session
-        const session = parsedSessions.find(s => s.id === savedId);
-        if (session) {
-          setMessages(session.messages);
-        }
-      }
+      //   // Load messages for this session
+      //   const session = parsedSessions.find(s => s.id === savedId);
+      //   if (session) {
+      //     setMessages(session.messages);
+      //   }
+      // }
     } catch (e) {
       console.error("Failed to restore chat session", e);
     } finally {
@@ -118,10 +120,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     let userContent = content;
     if (contextFiles.length > 0) {
+      // Use XML-style tags for better context recognition (OpenAI RAG standard)
       const contextStr = contextFiles
-        .map(f => `\n\n--- File: ${f.filePath} ---\n${f.content || "(No Content)"}`)
+        .map(f => `\n\n<document name="${f.filePath}">\n${f.content || "(No Content)"}\n</document>`)
         .join("");
-      userContent += contextStr;
+      userContent += `\n\nReference Documents:${contextStr}`;
     }
 
     const userMsg: ChatMessage = { role: "user", content: userContent };
@@ -212,6 +215,88 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   }, [isLoading, messages, createNewSession, updateSessionMessages]);
 
+  const regenerateLastResponse = useCallback(async () => {
+    if (isLoading || messages.length === 0) return;
+    
+    const activeId = currentSessionIdRef.current;
+    if (!activeId) return;
+
+    // 1. Prepare history: remove last assistant message if present
+    let historyToUse = [...messages];
+    const lastMsg = historyToUse[historyToUse.length - 1];
+    
+    if (lastMsg.role === "assistant") {
+        historyToUse.pop();
+    } else if (lastMsg.role !== "user") {
+        return; // Can't regenerate if not following a user message
+    }
+
+    // Update state to remove the old assistant message (if any)
+    setMessages(historyToUse);
+    updateSessionMessages(activeId, historyToUse);
+
+    setIsLoading(true);
+
+    // 2. Add new placeholder
+    const assistantMsgPlaceholder: ChatMessage = { role: "assistant", content: "" };
+    let messagesWithAssistant = [...historyToUse, assistantMsgPlaceholder];
+    setMessages(messagesWithAssistant);
+    updateSessionMessages(activeId, messagesWithAssistant);
+
+    let assistantContent = "";
+
+    // 3. Stream
+    await streamChatCompletion(
+      historyToUse,
+      (chunk) => {
+        assistantContent += chunk;
+        setMessages(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.length - 1;
+            if (updated[lastIdx].role === "assistant") {
+                updated[lastIdx] = { ...updated[lastIdx], content: assistantContent };
+            }
+            return updated;
+        });
+        setSessions(prev => prev.map(s => {
+            if (s.id === activeId) {
+                const updatedMsgs = [...s.messages];
+                const lastIdx = updatedMsgs.length - 1;
+                if (updatedMsgs[lastIdx].role === "assistant") {
+                    updatedMsgs[lastIdx] = { ...updatedMsgs[lastIdx], content: assistantContent };
+                } else {
+                     updatedMsgs.push({ role: "assistant", content: assistantContent });
+                }
+                return { ...s, messages: updatedMsgs };
+            }
+            return s;
+        }));
+      },
+      () => setIsLoading(false),
+      (err) => {
+        console.error(err);
+        const errorMsg = `\n\n**Error:** ${err.message}`;
+        assistantContent += errorMsg;
+        setMessages(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.length - 1;
+            updated[lastIdx] = { ...updated[lastIdx], content: assistantContent };
+            return updated;
+        });
+        setSessions(prev => prev.map(s => {
+            if (s.id === activeId) {
+                 const updatedMsgs = [...s.messages];
+                 const lastIdx = updatedMsgs.length - 1;
+                 updatedMsgs[lastIdx] = { ...updatedMsgs[lastIdx], content: assistantContent };
+                 return { ...s, messages: updatedMsgs };
+            }
+            return s;
+        }));
+        setIsLoading(false);
+      }
+    );
+  }, [isLoading, messages, updateSessionMessages]);
+
   const loadSession = useCallback((session: ChatSession) => {
     setCurrentSessionId(session.id);
     setMessages(session.messages);
@@ -241,6 +326,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadSession,
         clearCurrentSession,
         deleteSession,
+        regenerateLastResponse,
       }}
     >
       {children}

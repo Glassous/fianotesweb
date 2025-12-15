@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { RawNoteFile, FileSystemNode, FolderItem, ChatSession } from "../types";
 import { ChatMessage } from "../services/openai";
+import { fetchNoteContent } from "../services/github";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useChatContext } from "../contexts/ChatContext";
 
@@ -18,6 +19,18 @@ const StarIcon = () => (
       strokeWidth={2}
       d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
     />
+  </svg>
+);
+
+const RefreshIcon = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+  </svg>
+);
+
+const ClipboardIcon = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
   </svg>
 );
 
@@ -170,8 +183,19 @@ const FilePickerNode: React.FC<{
   onSelect: (path: string) => void;
   depth?: number;
 }> = ({ node, onSelect, depth = 0 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(depth === 0 && node.name.toLowerCase() !== "home"); // Auto-expand root unless it's the hidden home
   
+  // Special handling: if this node is "home" and we are at root depth, render its children directly
+  if (depth === 0 && node.name.toLowerCase() === "home" && node.type === "folder") {
+      return (
+          <>
+            {(node as FolderItem).children.map((child) => (
+                <FilePickerNode key={child.id} node={child} onSelect={onSelect} depth={0} />
+            ))}
+          </>
+      );
+  }
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (node.type === "file") {
@@ -208,6 +232,10 @@ interface CopilotSidebarProps {
   activeNote?: RawNoteFile;
   isMobile: boolean;
   isDarkMode: boolean;
+  width?: number;
+  onResizeStart?: (e: React.MouseEvent) => void;
+  containerRef?: React.RefObject<HTMLElement>;
+  onNoteContentLoad?: (filePath: string, content: string) => void;
 }
 
 export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
@@ -218,6 +246,10 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   activeNote,
   isMobile,
   isDarkMode,
+  width = 320,
+  onResizeStart,
+  containerRef,
+  onNoteContentLoad,
 }) => {
   const { 
     sessions, 
@@ -227,31 +259,52 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     sendMessage, 
     loadSession: hookLoadSession, 
     clearCurrentSession, 
-    deleteSession: hookDeleteSession 
+    deleteSession: hookDeleteSession,
+    regenerateLastResponse 
   } = useChatContext();
 
   const [input, setInput] = useState("");
   const [isSelectingFile, setIsSelectingFile] = useState(false);
   const [selectedContextFiles, setSelectedContextFiles] = useState<RawNoteFile[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Refs
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true); // Tracks if user is at the bottom
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // History State
   const [showHistory, setShowHistory] = useState(false);
 
-  // Auto-attach active note logic
-  useEffect(() => {
-    if (isOpen && activeNote && messages.length === 0 && selectedContextFiles.length === 0 && !currentSessionId) {
-        setSelectedContextFiles([activeNote]);
+  // --- Core Fix: Safe Auto-Scrolling ---
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+        // Direct manipulation of scrollTop does not affect global page layout
+        const container = messagesContainerRef.current;
+        container.scrollTop = container.scrollHeight;
     }
-  }, [isOpen, activeNote, currentSessionId, messages.length]);
+  };
 
-  // Scroll to bottom
   useEffect(() => {
-    if (!showHistory) {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Only scroll if tracking is active (user hasn't scrolled up)
+    if (!showHistory && isAtBottomRef.current) {
+        // Use requestAnimationFrame to sync with render cycles
+        requestAnimationFrame(() => {
+            scrollToBottom();
+        });
     }
   }, [messages, isLoading, showHistory]);
+
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    
+    // If the distance to the bottom is small (< 20px), we consider it "at bottom"
+    // If user scrolls up significantly, this becomes false, and auto-scroll pauses.
+    const isBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 20;
+    isAtBottomRef.current = isBottom;
+  };
+
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -263,17 +316,53 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
   const handleSend = async () => {
     if (!input.trim() && selectedContextFiles.length === 0) return;
-    if (isLoading) return;
+    if (isLoading || isDownloading) return;
 
     const content = input;
-    const files = [...selectedContextFiles];
     
-    // Clear input immediately for better UX
+    // Fetch content for selected files if missing
+    const needsFetch = selectedContextFiles.some(file => !file.content && file.blobUrl);
+    
+    let files = selectedContextFiles;
+
+    if (needsFetch) {
+        setIsDownloading(true);
+        try {
+            files = await Promise.all(selectedContextFiles.map(async (file) => {
+                if (!file.content && file.blobUrl) {
+                    try {
+                        const text = await fetchNoteContent(file.blobUrl);
+                        if (onNoteContentLoad) {
+                            onNoteContentLoad(file.filePath, text);
+                        }
+                        return { ...file, content: text };
+                    } catch (e) {
+                        console.error("Failed to fetch context content for", file.filePath, e);
+                        return { ...file, content: "(Failed to load content)" };
+                    }
+                }
+                return file;
+            }));
+        } catch (err) {
+            console.error("Error during file download", err);
+        } finally {
+            setIsDownloading(false);
+        }
+    }
+    
     setInput("");
     setSelectedContextFiles([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
+    // When sending, force snap to bottom and re-enable auto-tracking
+    isAtBottomRef.current = true;
+    scrollToBottom();
+
     await sendMessage(content, files);
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -295,6 +384,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
       hookLoadSession(session);
       setShowHistory(false);
       setSelectedContextFiles([]);
+      isAtBottomRef.current = true; // Reset scroll tracking
   };
 
   const deleteSession = (e: React.MouseEvent, id: string) => {
@@ -322,7 +412,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     setSelectedContextFiles(selectedContextFiles.filter(f => f.filePath !== filePath));
   };
 
-  // Filter notes for file picker (legacy flat list if no tree)
+  // Filter notes for file picker
   const [fileSearch, setFileSearch] = useState("");
   const filteredNotes = notes.filter(n => 
     n.filePath.toLowerCase().includes(fileSearch.toLowerCase())
@@ -330,26 +420,60 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
   const containerClasses = isMobile
     ? `fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 shadow-2xl transition-transform duration-300 rounded-t-2xl flex flex-col h-[85vh] ${isOpen ? "translate-y-0" : "translate-y-full"}`
-    : `w-80 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col h-full overflow-hidden transition-all duration-300 ${isOpen ? "mr-0" : "-mr-80 hidden"}`;
+    : `bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col h-full overflow-hidden transition-all duration-300`;
+
+  const desktopStyle = isMobile ? {} : {
+    width: width,
+    marginRight: isOpen ? 0 : -width,
+    visibility: isOpen ? 'visible' as const : 'hidden' as const
+  };
 
   const renderUserMessage = (content: string) => {
-    const parts = content.split("\n\n--- File: ");
+    // New format: Text + \n\nReference Documents: + XML docs
+    const parts = content.split("\n\nReference Documents:");
     const userText = parts[0];
-    const files = parts.slice(1).map(part => {
-        const firstLineBreak = part.indexOf(" ---\n");
-        if (firstLineBreak === -1) return null;
-        const path = part.substring(0, firstLineBreak);
-        return path;
-    }).filter(Boolean);
+    const docsSection = parts[1];
+    
+    let files: { path: string }[] = [];
+    
+    if (docsSection) {
+        // Regex to extract file paths from <document name="...">
+        const regex = /<document name="(.*?)">/g;
+        let match;
+        while ((match = regex.exec(docsSection)) !== null) {
+            files.push({ path: match[1] });
+        }
+    } else {
+        // Legacy fallback
+        const legacyParts = content.split("\n\n--- File: ");
+        if (legacyParts.length > 1) {
+             return (
+                <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                        {legacyParts.slice(1).map((part, i) => {
+                             const path = part.split(" ---\n")[0];
+                             return (
+                                <div key={i} className="flex items-center gap-1.5 bg-blue-700/50 border border-blue-500/30 px-2 py-1.5 rounded text-xs text-blue-100">
+                                    <FileIcon />
+                                    <span className="truncate max-w-[150px]">{path?.split('/').pop()}</span>
+                                </div>
+                             )
+                        })}
+                    </div>
+                    <div className="whitespace-pre-wrap">{legacyParts[0]}</div>
+                </div>
+             );
+        }
+    }
     
     return (
         <div className="flex flex-col gap-2">
             {files.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                    {files.map((path, i) => (
+                    {files.map((f, i) => (
                         <div key={i} className="flex items-center gap-1.5 bg-blue-700/50 border border-blue-500/30 px-2 py-1.5 rounded text-xs text-blue-100">
                             <FileIcon />
-                            <span className="truncate max-w-[150px]">{path?.split('/').pop()}</span>
+                            <span className="truncate max-w-[150px]">{f.path?.split('/').pop()}</span>
                         </div>
                     ))}
                 </div>
@@ -369,7 +493,19 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
         />
       )}
 
-      <aside className={containerClasses}>
+      <aside 
+        ref={containerRef}
+        className={`${containerClasses} relative`} 
+        style={desktopStyle}
+      >
+        {/* Resizer Handle (Desktop) */}
+        {!isMobile && isOpen && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-blue-500/50 transition-colors"
+            onMouseDown={onResizeStart}
+          />
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0 h-16">
           <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-100 font-semibold">
@@ -388,13 +524,15 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
           <div className="flex items-center gap-1">
             {!showHistory && (
                 <>
-                    <button
-                    onClick={handleNewChat}
-                    className="p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors"
-                    title="New Chat"
-                    >
-                    <PlusIcon />
-                    </button>
+                    {messages.length > 0 && (
+                        <button
+                        onClick={handleNewChat}
+                        className="p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors"
+                        title="New Chat"
+                        >
+                        <PlusIcon />
+                        </button>
+                    )}
                     <button
                     onClick={() => setShowHistory(true)}
                     className="p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors"
@@ -445,7 +583,11 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                 // Chat Area
                 <>
                      {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 relative min-h-0">
+                    <div 
+                        ref={messagesContainerRef}
+                        onScroll={handleScroll}
+                        className="flex-1 overflow-y-auto p-4 space-y-4 relative min-h-0"
+                    >
                         {messages.length === 0 && (
                             <div className="text-center text-zinc-400 dark:text-zinc-500 mt-10 text-sm">
                             <p>Start a conversation with Fia Copilot.</p>
@@ -457,32 +599,65 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                             key={idx}
                             className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                             >
-                            <div
-                                className={`max-w-[90%] rounded-lg p-3 text-sm ${
-                                msg.role === "user"
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
-                                }`}
-                            >
                                 {msg.role === "user" ? (
-                                    renderUserMessage(msg.content)
-                                ) : (
-                                <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />
-                                )}
-                            </div>
+                    <div className="max-w-[90%] rounded-lg p-3 text-sm bg-blue-600 text-white">
+                        {renderUserMessage(msg.content)}
+                    </div>
+                ) : (
+                    <div className="w-full text-sm text-zinc-800 dark:text-zinc-200 px-1">
+                        <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />
+                        <div className="flex items-center gap-3 mt-2 select-none">
+                            <button 
+                                onClick={() => handleCopy(msg.content)}
+                                className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                title="Copy"
+                            >
+                                <ClipboardIcon />
+                                <span>Copy</span>
+                            </button>
+                            {idx === messages.length - 1 && (
+                                <button 
+                                    onClick={regenerateLastResponse}
+                                    disabled={isLoading}
+                                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-blue-500 transition-colors disabled:opacity-50"
+                                    title="Regenerate"
+                                >
+                                    <RefreshIcon />
+                                    <span>Regenerate</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
                             </div>
                         ))}
-                        <div ref={messagesEndRef} />
+                        {/* No refs here, scrolling is handled via scrollTop */}
+                    </div>
+
+                    {/* Input Area + File Picker Wrapper */}
+                    <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900 relative z-30">
                         
-                        {/* File Selection Bottom Sheet (Internal) */}
+                        {/* Download Indicator */}
+                        {isDownloading && (
+                             <div className="absolute -top-8 left-0 right-0 flex justify-center">
+                                 <div className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
+                                     <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                     </svg>
+                                     Downloading file content...
+                                 </div>
+                             </div>
+                        )}
+
+                        {/* File Selection Bottom Sheet - Positioned Absolutely ABOVE the input area */}
                         {isSelectingFile && (
-                            <div className="absolute inset-x-0 bottom-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10 flex flex-col max-h-[60vh] animate-in slide-in-from-bottom-10 duration-200 rounded-t-xl">
+                            <div className="absolute bottom-full left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.15)] z-20 flex flex-col max-h-[300px] rounded-t-xl animate-in slide-in-from-bottom-5 duration-200">
                                 <div className="p-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between shrink-0">
                                     <span className="text-xs font-semibold uppercase text-zinc-500">Select File</span>
                                     <button onClick={() => setIsSelectingFile(false)} className="text-zinc-400 hover:text-zinc-600"><XMarkIcon /></button>
                                 </div>
                                 <div className="p-2 shrink-0">
-                                    {/* Only show search if using flat list or if we want to filter tree? For now simple input for flat list fallback or tree filter (not implemented yet for tree) */}
                                     {!fileTree && (
                                         <input 
                                             type="text" 
@@ -517,10 +692,18 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                 </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* Input Area */}
-                    <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
+                        {/* Suggest Adding Active Note */}
+                        {!isSelectingFile && activeNote && !selectedContextFiles.some(f => f.filePath === activeNote.filePath) && (
+                            <button 
+                                onClick={() => addFileContext(activeNote)}
+                                className="flex items-center gap-1.5 mb-2 px-1 text-xs text-blue-600 dark:text-blue-400 hover:underline transition-colors w-full text-left"
+                            >
+                                <PlusIcon />
+                                <span className="truncate">Add current file: {activeNote.filePath.split('/').pop()}</span>
+                            </button>
+                        )}
+
                         {/* Selected Files Context */}
                         {selectedContextFiles.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-2">

@@ -144,6 +144,71 @@ const MainLayout: React.FC = () => {
   const [hoverOpen, setHoverOpen] = useState(false); // For edge hover
   const mainContentRef = useRef<HTMLDivElement>(null);
 
+  // --- Resize State (Desktop Only) ---
+  const [sidebarWidth, setSidebarWidth] = useState(288);
+  const [copilotWidth, setCopilotWidth] = useState(320);
+  const isResizingSidebar = useRef(false);
+  const isResizingCopilot = useRef(false);
+  
+  // Refs for Direct DOM Manipulation (Performance)
+  const sidebarRef = useRef<HTMLElement>(null);
+  const copilotRef = useRef<HTMLElement>(null);
+  const currentSidebarWidthRef = useRef(288);
+  const currentCopilotWidthRef = useRef(320);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingSidebar.current && sidebarRef.current) {
+        const newWidth = e.clientX;
+        if (newWidth >= 200 && newWidth <= 600) {
+          // Direct DOM update
+          sidebarRef.current.style.width = `${newWidth}px`;
+          // Disable transition during drag to prevent lag
+          sidebarRef.current.style.transition = 'none';
+          currentSidebarWidthRef.current = newWidth;
+        }
+      }
+      if (isResizingCopilot.current && copilotRef.current) {
+        const newWidth = window.innerWidth - e.clientX;
+        if (newWidth >= 250 && newWidth <= 800) {
+           // Direct DOM update
+           copilotRef.current.style.width = `${newWidth}px`;
+           copilotRef.current.style.marginRight = '0px'; // Ensure it stays docked
+           // Disable transition
+           copilotRef.current.style.transition = 'none';
+           currentCopilotWidthRef.current = newWidth;
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isResizingSidebar.current) {
+        isResizingSidebar.current = false;
+        setSidebarWidth(currentSidebarWidthRef.current);
+        if (sidebarRef.current) {
+            sidebarRef.current.style.transition = ''; // Restore transition
+        }
+      }
+      if (isResizingCopilot.current) {
+        isResizingCopilot.current = false;
+        setCopilotWidth(currentCopilotWidthRef.current);
+        if (copilotRef.current) {
+            copilotRef.current.style.transition = ''; // Restore transition
+        }
+      }
+      document.body.style.cursor = "default";
+      document.body.style.userSelect = "auto";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
   // Data State
   const [notesData, setNotesData] = useState<RawNoteFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -319,7 +384,7 @@ const MainLayout: React.FC = () => {
     if (note && !note.content && note.blobUrl && !contentLoading) {
       setContentLoading(true);
       fetchNoteContent(note.blobUrl)
-         .then((content) => {
+        .then((content) => {
            // Parse Frontmatter
            const { data, content: mdContent } = parseFrontmatter(content);
 
@@ -337,6 +402,13 @@ const MainLayout: React.FC = () => {
         .finally(() => setContentLoading(false));
     }
   }, [activeFilePath, notesData]); // Note: This dependency array is safe because we check !note.content
+
+  // Callback to update note content (caching) from Copilot
+  const handleUpdateNoteContent = (filePath: string, content: string) => {
+      setNotesData(prev => prev.map(n => 
+          n.filePath === filePath ? { ...n, content } : n
+      ));
+  };
 
   // Effect: Scroll to top when file changes
   useEffect(() => {
@@ -372,9 +444,10 @@ const MainLayout: React.FC = () => {
 
       {/* 2. Sidebar Container */}
       <aside
+        ref={sidebarRef}
         className={`
           flex-none h-full bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-40
-          transition-[width,transform,background-color] duration-300 ease-in-out
+          transition-[width,transform,background-color] duration-300 ease-in-out relative
           ${
             isMobile
               ? "fixed inset-y-0 left-0" // Fixed on mobile
@@ -386,12 +459,26 @@ const MainLayout: React.FC = () => {
                 ? "translate-x-0 w-[280px] shadow-2xl"
                 : "-translate-x-full w-[280px]"
               : sidebarVisible
-                ? "w-72 translate-x-0"
+                ? "translate-x-0"
                 : "w-0 -translate-x-full overflow-hidden border-none"
           }
         `}
+        style={!isMobile ? { width: sidebarVisible ? sidebarWidth : 0 } : {}}
         onMouseLeave={() => !isSidebarOpen && setHoverOpen(false)} // Close if it was only open due to hover
       >
+        {/* Resizer Handle (Desktop) */}
+        {!isMobile && sidebarVisible && (
+            <div 
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-blue-500/50 transition-colors"
+                onMouseDown={(e) => {
+                    e.preventDefault();
+                    isResizingSidebar.current = true;
+                    document.body.style.cursor = "col-resize";
+                    document.body.style.userSelect = "none";
+                }}
+            />
+        )}
+
         <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between shrink-0 h-16">
           <div>
             <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 tracking-tight">
@@ -599,6 +686,7 @@ const MainLayout: React.FC = () => {
       </div>
 
       <CopilotSidebar
+        containerRef={copilotRef}
         isOpen={isCopilotOpen}
         onClose={() => setIsCopilotOpen(false)}
         notes={notesData}
@@ -606,6 +694,14 @@ const MainLayout: React.FC = () => {
         activeNote={currentNote || undefined}
         isMobile={isMobile}
         isDarkMode={isDarkMode}
+        width={copilotWidth}
+        onResizeStart={(e) => {
+          e.preventDefault();
+          isResizingCopilot.current = true;
+          document.body.style.cursor = "col-resize";
+          document.body.style.userSelect = "none";
+        }}
+        onNoteContentLoad={handleUpdateNoteContent}
       />
     </div>
   );
