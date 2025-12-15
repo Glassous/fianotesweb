@@ -11,9 +11,9 @@ export interface OpenAIConfig {
 
 export const getOpenAIConfig = (): OpenAIConfig => {
   return {
-    baseUrl: import.meta.env.VITE_OPENAI_BASE_URL || "https://api.openai.com/v1",
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY || "",
-    model: import.meta.env.VITE_OPENAI_MODEL || "gpt-3.5-turbo",
+    baseUrl: (import.meta as any).env?.VITE_OPENAI_BASE_URL || "https://api.openai.com/v1",
+    apiKey: (import.meta as any).env?.VITE_OPENAI_API_KEY || "",
+    model: (import.meta as any).env?.VITE_OPENAI_MODEL || "gpt-5",
   };
 };
 

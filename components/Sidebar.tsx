@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { FileSystemNode, FolderItem, NoteItem, OutlineItem } from "../types";
 import { OutlineView } from "./OutlineView";
+import { FolderIcon, getFileIcon } from "./FileIcons";
 
 interface SidebarProps {
   rootNode: FileSystemNode;
@@ -23,38 +24,6 @@ interface SidebarNodeProps {
 }
 
 // --- Icons ---
-
-const FileIcon = () => (
-  <svg
-    className="w-4 h-4 mr-2 text-zinc-400 dark:text-zinc-500"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-    />
-  </svg>
-);
-
-const FolderIcon = ({ open }: { open: boolean }) => (
-  <svg
-    className={`w-4 h-4 mr-2 text-yellow-500 dark:text-yellow-600 transition-transform ${open ? "rotate-90" : ""}`}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-    />
-  </svg>
-);
 
 const SearchIcon = () => (
   <svg
@@ -161,7 +130,11 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         `}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
-        {node.type === "folder" ? <FolderIcon open={isOpen} /> : <FileIcon />}
+        {node.type === "folder" ? (
+          <FolderIcon open={isOpen} className="mr-2" />
+        ) : (
+          getFileIcon(node.name, "mr-2")
+        )}
         <span className="truncate">{node.name}</span>
       </div>
 
@@ -295,7 +268,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         }
                       `}
                     >
-                      <FileIcon />
+                      {getFileIcon(file.name, "mr-2")}
                       <div className="flex flex-col min-w-0">
                         <span className="truncate">{file.name}</span>
                         <span className="text-[10px] text-zinc-400 truncate">
