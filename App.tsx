@@ -12,6 +12,7 @@ import { Sidebar } from "./components/Sidebar";
 import { CopilotSidebar } from "./components/CopilotSidebar";
 import { MarkdownRenderer } from "./components/MarkdownRenderer";
 import { CodeViewer } from "./components/CodeViewer";
+import { JSXRenderer } from "./components/JSXRenderer";
 import { LoadingAnimation } from "./components/LoadingAnimation";
 import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
@@ -329,6 +330,8 @@ const MainLayout: React.FC = () => {
       if (iframe) {
         iframe.srcdoc = currentNote?.content || "";
       }
+    } else if (currentNote?.filePath.endsWith(".jsx") && viewMode === "preview") {
+      setRefreshKey(prev => prev + 1);
     }
   };
 
@@ -419,6 +422,7 @@ const MainLayout: React.FC = () => {
 
   // View Mode State (for HTML files)
   const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Initial Load
   const loadNotes = async () => {
@@ -545,6 +549,7 @@ const MainLayout: React.FC = () => {
   // Effect: On Mount, if there is a path, clear it.
   useEffect(() => {
     if (location.pathname !== "/") {
+      setOpenFiles([]);
       navigate("/", { replace: true });
     }
   }, []); // Run once on mount
@@ -1059,8 +1064,8 @@ const MainLayout: React.FC = () => {
 
             {/* Desktop Toolbar */}
             <div className="hidden md:flex items-center gap-1">
-              {/* Refresh Button for HTML Preview */}
-              {currentNote?.filePath.endsWith(".html") && viewMode === "preview" && (
+              {/* Refresh Button for HTML/JSX Preview */}
+              {(currentNote?.filePath.endsWith(".html") || currentNote?.filePath.endsWith(".jsx")) && viewMode === "preview" && (
                 <button
                   onClick={handleRefreshHtmlPreview}
                   className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
@@ -1330,10 +1335,16 @@ const MainLayout: React.FC = () => {
                                     className="w-full h-[calc(100vh-4rem)] border-none bg-white"
                                     title="Preview"
                                 />
-                                ) : (note.filePath.endsWith(".html") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
+                                ) : note.filePath.endsWith(".jsx") && viewMode === "preview" ? (
+                                <JSXRenderer
+                                    key={`${note.filePath}-${refreshKey}`}
+                                    code={note.content}
+                                    isDark={isDarkMode}
+                                />
+                                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
                                 <CodeViewer 
                                     content={note.content} 
-                                    language={note.filePath.endsWith(".html") ? "xml" : getLanguageFromExtension(note.filePath)!} 
+                                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : getLanguageFromExtension(note.filePath)!} 
                                     isDark={isDarkMode}
                                 />
                                 ) : (
@@ -1346,7 +1357,7 @@ const MainLayout: React.FC = () => {
                                 )}
                             </div>
 
-                            {(!getLanguageFromExtension(note.filePath) || note.filePath.endsWith(".html")) && (!note.filePath.endsWith(".html") || viewMode === "source") && (
+                            {(!getLanguageFromExtension(note.filePath) || note.filePath.endsWith(".html") || note.filePath.endsWith(".jsx")) && (!note.filePath.endsWith(".html") && !note.filePath.endsWith(".jsx") || viewMode === "source") && (
                                 <div className="p-8 max-w-4xl mx-auto border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-12 transition-colors">
                                 <div className="flex flex-wrap gap-2">
                                     {note.metadata?.tags?.map((tag: string) => (
