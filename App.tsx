@@ -19,6 +19,8 @@ import { MOCK_NOTES } from "./constants";
 import { RawNoteFile, NoteItem, OutlineItem } from "./types";
 import { fetchNotesTree, fetchNoteContent, isGitHubConfigured } from "./services/github";
 
+import { getFileIcon } from "./components/FileIcons";
+
 // --- Icons ---
 const MenuIcon = () => (
   <svg
@@ -49,6 +51,17 @@ const CloseIcon = ({ className }: { className?: string }) => (
       strokeWidth={2}
       d="M6 18L18 6M6 6l12 12"
     />
+  </svg>
+);
+
+const ChevronDownIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className || "w-5 h-5"}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
   </svg>
 );
 
@@ -394,6 +407,10 @@ const MainLayout: React.FC = () => {
   // Recent Files State
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [copilotContextFiles, setCopilotContextFiles] = useState<RawNoteFile[]>([]);
+  
+  // Open Files State (Tabs)
+  const [openFiles, setOpenFiles] = useState<string[]>([]);
+  const [isTabDropdownOpen, setIsTabDropdownOpen] = useState(false);
 
   // Outline State
   const [sidebarTab, setSidebarTab] = useState<"files" | "outline">("files");
@@ -518,6 +535,13 @@ const MainLayout: React.FC = () => {
       : decoded;
   }, [rawPath]);
 
+  // Effect: Add active file to open files list
+  useEffect(() => {
+    if (activeFilePath && !openFiles.includes(activeFilePath)) {
+      setOpenFiles(prev => [...prev, activeFilePath]);
+    }
+  }, [activeFilePath]);
+
   // Effect: On Mount, if there is a path, clear it.
   useEffect(() => {
     if (location.pathname !== "/") {
@@ -566,7 +590,7 @@ const MainLayout: React.FC = () => {
 
   // Effect: Scroll Spy for Outline Highlighting
   useEffect(() => {
-    const container = mainContentRef.current;
+    const container = document.getElementById(`scroll-container-${activeFilePath}`);
     if (!container || !outlineItems.length) return;
 
     // Helper to flatten outline items for easier traversal
@@ -627,7 +651,7 @@ const MainLayout: React.FC = () => {
 
   const handleHeadingClick = (id: string) => {
     const element = document.getElementById(id);
-    const container = mainContentRef.current;
+    const container = document.getElementById(`scroll-container-${activeFilePath}`);
 
     if (element && container) {
       // Calculate position relative to the scroll container
@@ -685,11 +709,8 @@ const MainLayout: React.FC = () => {
       ));
   };
 
-  // Effect: Scroll to top when file changes
+  // Effect: Reset view mode to preview when file changes
   useEffect(() => {
-    if (mainContentRef.current) {
-      mainContentRef.current.scrollTop = 0;
-    }
     // Reset view mode to preview when file changes
     setViewMode("preview");
   }, [activeFilePath]);
@@ -703,6 +724,22 @@ const MainLayout: React.FC = () => {
   const handleSelectNote = (note: NoteItem) => {
     // Navigate using the 'note' prefix to distinguish from other potential routes
     navigate(`/note/${note.path}`);
+  };
+
+  const handleCloseTab = (e: React.MouseEvent, filePath: string) => {
+    e.stopPropagation();
+    const newOpenFiles = openFiles.filter(f => f !== filePath);
+    setOpenFiles(newOpenFiles);
+    
+    // If we closed the active file, navigate to another one
+    if (activeFilePath === filePath) {
+        if (newOpenFiles.length > 0) {
+            // Navigate to the last opened file
+            navigate(`/note/${newOpenFiles[newOpenFiles.length - 1]}`);
+        } else {
+            navigate('/');
+        }
+    }
   };
 
   const handleRemoveRecentFile = (e: React.MouseEvent, filePath: string) => {
@@ -873,42 +910,113 @@ const MainLayout: React.FC = () => {
         ${isMobile && isSidebarOpen ? "blur-sm scale-[0.98] pointer-events-none select-none" : ""}
       `}
       >
-        {/* Top Bar / Header */}
-        <header className="h-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 flex items-center px-4 shrink-0 justify-between z-20 transition-colors duration-200">
-          <div className="flex items-center min-w-0 mr-2">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 mr-4 -ml-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 focus:outline-none transition-colors"
-              title={isSidebarOpen ? t('app.closeSidebar') : t('app.openSidebar')}
-            >
-              {isSidebarOpen ? <CloseIcon /> : <MenuIcon />}
-            </button>
+          {/* Top Bar / Header */}
+          <header className="h-12 bg-zinc-200 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-end px-2 shrink-0 justify-between z-20 transition-colors duration-200 pt-2 gap-2">
+           <div className="flex items-center min-w-0 flex-1 h-full">
+             <button
+               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+               className="p-1.5 mr-2 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 focus:outline-none transition-colors shrink-0 mb-1.5"
+               title={isSidebarOpen ? t('app.closeSidebar') : t('app.openSidebar')}
+             >
+               {isSidebarOpen ? <CloseIcon className="w-5 h-5" /> : <MenuIcon />}
+             </button>
 
-            {currentNote ? (
-              <div className="flex flex-col truncate">
-                <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-200 truncate">
-                  {currentNote.metadata?.title ||
-                    currentNote.filePath.split("/").pop()?.replace(/\.md$/, "")}
-                </h2>
-                <div className="flex items-center text-xs text-zinc-500 dark:text-zinc-400 truncate space-x-2">
-                  <span>{currentNote.filePath}</span>
-                  <button
-                    onClick={() => navigate("/")}
-                    className="p-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shrink-0"
-                    title={t('app.closeFile')}
-                  >
-                    <CloseIcon className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              <div className="flex-1 min-w-0 h-full flex items-end">
+                 {isMobile ? (
+                    <div className="relative w-full mr-2 self-center mb-1.5">
+                      <button 
+                        onClick={() => setIsTabDropdownOpen(!isTabDropdownOpen)}
+                        className="w-full flex items-center justify-between px-3 py-1.5 bg-white dark:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 shadow-sm transition-colors"
+                      >
+                        <span className="truncate flex-1 text-left flex items-center gap-2">
+                            {currentNote && getFileIcon(currentNote.filePath, "w-4 h-4")}
+                            {currentNote 
+                              ? (currentNote.metadata?.title || currentNote.filePath.split('/').pop()?.replace(/\.md$/, "")) 
+                              : (openFiles.length > 0 ? t('app.selectFile', 'Select File') : t('app.title'))}
+                        </span>
+                        <ChevronDownIcon className="w-4 h-4 text-zinc-500 ml-2" />
+                      </button>
+                      
+                      {isTabDropdownOpen && (
+                         <div className="absolute top-full left-0 w-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+                             {openFiles.length === 0 ? (
+                                 <div className="p-3 text-xs text-zinc-500 text-center">{t('app.noOpenFiles', 'No open files')}</div>
+                             ) : (
+                                 openFiles.map(path => (
+                                     <div 
+                                         key={path} 
+                                         className={`flex items-center justify-between p-2 hover:bg-zinc-50 dark:hover:bg-zinc-700 cursor-pointer ${activeFilePath === path ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : ''}`}
+                                         onClick={() => { navigate(`/note/${path}`); setIsTabDropdownOpen(false); }}
+                                     >
+                                        <div className="flex items-center gap-2 truncate">
+                                            {getFileIcon(path, "w-4 h-4 shrink-0")}
+                                            <span className="truncate text-sm">{path.split('/').pop()?.replace(/\.md$/, "")}</span>
+                                        </div>
+                                         <button 
+                                             onClick={(e) => handleCloseTab(e, path)}
+                                             className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-600 rounded"
+                                         >
+                                             <CloseIcon className="w-3.5 h-3.5"/>
+                                         </button>
+                                     </div>
+                                 ))
+                             )}
+                         </div>
+                      )}
+                    </div>
+                 ) : (
+                    <div className="flex items-end h-full overflow-x-auto w-full no-scrollbar">
+                       {openFiles.length === 0 && (
+                           <span className="text-zinc-500 dark:text-zinc-400 font-medium px-2 pb-3 self-center">
+                             {t('app.title')}
+                           </span>
+                       )}
+                       {openFiles.map((path, index) => {
+                           const isActive = activeFilePath === path;
+                           const fileName = path.split('/').pop()?.replace(/\.md$/, "");
+                           return (
+                               <div 
+                                 key={path}
+                                 onClick={() => navigate(`/note/${path}`)}
+                                 className={`
+                                     group relative flex items-center min-w-[140px] max-w-[200px] h-9 px-3 
+                                     rounded-t-lg cursor-pointer transition-all select-none
+                                     ${isActive 
+                                        ? 'bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 z-10' 
+                                        : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300/50 dark:hover:bg-zinc-800/50 hover:text-zinc-700 dark:hover:text-zinc-200'}
+                                 `}
+                               >
+                                  {/* Separator (only for inactive tabs and not the last one) */}
+                                  {!isActive && index < openFiles.length - 1 && openFiles[index + 1] !== activeFilePath && (
+                                    <div className="absolute right-0 top-2 bottom-2 w-px bg-zinc-300 dark:bg-zinc-700 group-hover:hidden" />
+                                  )}
+
+                                  {/* Icon */}
+                                  <div className="mr-2 shrink-0 opacity-80">
+                                    {getFileIcon(path, "w-4 h-4")}
+                                  </div>
+
+                                  {/* Title */}
+                                  <span className="truncate text-xs font-medium flex-1 pb-0.5">{fileName}</span>
+                                  
+                                  {/* Close Button */}
+                                  <button
+                                    onClick={(e) => handleCloseTab(e, path)}
+                                    className={`ml-1 p-0.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                  >
+                                      <CloseIcon className="w-3 h-3" />
+                                  </button>
+                                  
+                                  {/* Curve Connector (Optional, mimicking browser tabs) - Simplified to just rounded corners for now as per image reference it looks like standard rounded tabs but with dark background */}
+                               </div>
+                           );
+                       })}
+                    </div>
+                 )}
               </div>
-            ) : (
-              <span className="text-zinc-500 dark:text-zinc-400 font-medium">
-                {t('app.title')}
-              </span>
-            )}
-          </div>
+           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 mb-1.5">
             {/* HTML Preview Toggle */}
             {currentNote && currentNote.filePath.endsWith(".html") && (
               <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
@@ -1120,70 +1228,13 @@ const MainLayout: React.FC = () => {
         <div className="flex-1 flex overflow-hidden relative">
         {/* Scrollable Document Content */}
         <main
-          ref={mainContentRef}
           style={{ 
             marginRight: !isMobile && isCopilotOpen && !isCopilotExpanded ? copilotWidth : 0,
             transition: 'margin-right 0.3s ease'
           }}
-          className="flex-1 overflow-y-auto bg-gray-50 dark:bg-zinc-950 scroll-smooth transition-colors duration-200"
+          className="flex-1 overflow-hidden bg-gray-50 dark:bg-zinc-950 transition-colors duration-200 relative"
         >
-          {currentNote?.content ? (
-            <div className="w-full min-h-full">
-              {/* Note: max-w-none is handled in MarkdownRenderer, removing container constraints here allows full width */}
-              <div className="mx-auto w-full">
-                {currentNote.filePath.endsWith(".html") && viewMode === "preview" ? (
-                  <iframe
-                    srcDoc={currentNote.content}
-                    className="w-full h-[calc(100vh-4rem)] border-none bg-white"
-                    title="Preview"
-                  />
-                ) : (currentNote.filePath.endsWith(".html") && viewMode === "source") || getLanguageFromExtension(currentNote.filePath) ? (
-                   // Code Viewer for HTML Source and other code files
-                   <CodeViewer 
-                     content={currentNote.content} 
-                     language={currentNote.filePath.endsWith(".html") ? "xml" : getLanguageFromExtension(currentNote.filePath)!} 
-                     isDark={isDarkMode}
-                   />
-                ) : (
-                  <MarkdownRenderer 
-                    content={currentNote.content} 
-                    isDark={isDarkMode} 
-                    onSelectionAction={handleAskCopilot}
-                    onInternalLinkClick={handleHeadingClick}
-                  />
-                )}
-              </div>
-
-              {/* Footer Metadata in Document Flow - Hide for code viewer unless we want it? usually code files don't need metadata footer */}
-              {(!getLanguageFromExtension(currentNote.filePath) || currentNote.filePath.endsWith(".html")) && (!currentNote.filePath.endsWith(".html") || viewMode === "source") && (
-                <div className="p-8 max-w-4xl mx-auto border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-12 transition-colors">
-                  <div className="flex flex-wrap gap-2">
-                    {currentNote.metadata?.tags?.map((tag: string) => (
-                      <span
-                        key={tag}
-                        className="text-xs font-mono bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/50"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : contentLoading ? (
-            <div className="p-8 max-w-4xl mx-auto space-y-8 mt-8">
-              <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4 animate-pulse"></div>
-              <div className="space-y-3">
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-5/6 animate-pulse"></div>
-              </div>
-              <div className="space-y-3 pt-4">
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
-                <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-4/6 animate-pulse"></div>
-              </div>
-            </div>
-          ) : (
+          {openFiles.length === 0 ? (
             /* Empty State */
             <div className="flex flex-col items-center justify-center h-full text-zinc-400 dark:text-zinc-500 p-4 transition-colors animate-in fade-in duration-500">
               <div className="mb-8 flex flex-col items-center">
@@ -1237,7 +1288,6 @@ const MainLayout: React.FC = () => {
                                 aria-label={t('app.open')}
                             />
                           <div className="relative z-10 p-1.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 group-hover:text-blue-500 transition-colors pointer-events-none">
-                            {/* Simple File Icon */}
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
@@ -1260,6 +1310,74 @@ const MainLayout: React.FC = () => {
                 )}
               </div>
             </div>
+          ) : (
+            openFiles.map(filePath => {
+                const note = notesData.find(n => n.filePath === filePath);
+                const isActive = filePath === activeFilePath;
+                
+                return (
+                    <div 
+                        key={filePath}
+                        id={`scroll-container-${filePath}`}
+                        className={`w-full h-full overflow-y-auto scroll-smooth absolute inset-0 bg-gray-50 dark:bg-zinc-950 ${isActive ? 'z-10' : 'z-0 invisible'}`}
+                    >
+                        {note?.content ? (
+                            <div className="w-full min-h-full">
+                            <div className="mx-auto w-full">
+                                {note.filePath.endsWith(".html") && viewMode === "preview" ? (
+                                <iframe
+                                    srcDoc={note.content}
+                                    className="w-full h-[calc(100vh-4rem)] border-none bg-white"
+                                    title="Preview"
+                                />
+                                ) : (note.filePath.endsWith(".html") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
+                                <CodeViewer 
+                                    content={note.content} 
+                                    language={note.filePath.endsWith(".html") ? "xml" : getLanguageFromExtension(note.filePath)!} 
+                                    isDark={isDarkMode}
+                                />
+                                ) : (
+                                <MarkdownRenderer 
+                                    content={note.content} 
+                                    isDark={isDarkMode} 
+                                    onSelectionAction={handleAskCopilot}
+                                    onInternalLinkClick={handleHeadingClick}
+                                />
+                                )}
+                            </div>
+
+                            {(!getLanguageFromExtension(note.filePath) || note.filePath.endsWith(".html")) && (!note.filePath.endsWith(".html") || viewMode === "source") && (
+                                <div className="p-8 max-w-4xl mx-auto border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-12 transition-colors">
+                                <div className="flex flex-wrap gap-2">
+                                    {note.metadata?.tags?.map((tag: string) => (
+                                    <span
+                                        key={tag}
+                                        className="text-xs font-mono bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/50"
+                                    >
+                                        #{tag}
+                                    </span>
+                                    ))}
+                                </div>
+                                </div>
+                            )}
+                            </div>
+                        ) : (
+                            <div className="p-8 max-w-4xl mx-auto space-y-8 mt-8">
+                                <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4 animate-pulse"></div>
+                                <div className="space-y-3">
+                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
+                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
+                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-5/6 animate-pulse"></div>
+                                </div>
+                                <div className="space-y-3 pt-4">
+                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
+                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-4/6 animate-pulse"></div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            })
           )}
         </main>
 

@@ -28,7 +28,9 @@
     "changeLanguage": "Change Language",
     "untitled": "Untitled",
     "selectedText": "Selected Text",
-    "errorPrefix": "Error: "
+    "errorPrefix": "Error: ",
+    "selectFile": "Select File",
+    "noOpenFiles": "No open files"
   },
   "markdown": {
     "copy": "Copy",

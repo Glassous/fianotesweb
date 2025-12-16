@@ -28,7 +28,9 @@
     "changeLanguage": "切换语言",
     "untitled": "无标题",
     "selectedText": "选中的文本",
-    "errorPrefix": "错误： "
+    "errorPrefix": "错误： ",
+    "selectFile": "选择文件",
+    "noOpenFiles": "无打开文件"
   },
   "markdown": {
     "copy": "复制",
