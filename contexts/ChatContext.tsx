@@ -334,17 +334,37 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           parts.push({ type: "text", text: content });
       }
 
-      contextFiles.forEach(f => {
-          const isDataUrl = f.content?.startsWith("data:");
-          if (isDataUrl && f.content) {
-              parts.push({
-                  type: "image_url",
-                  image_url: { url: f.content }
-              });
-          } else {
+      contextFiles.forEach((f, index) => {
+                const isDataUrl = f.content?.startsWith("data:");
+                const isBlobUrl = f.content?.startsWith("blob:");
+                
+                if ((isDataUrl || isBlobUrl) && f.content) {
+                    if (isDataUrl) {
+                        parts.push({
+                            type: "image_url",
+                            image_url: { url: f.content }
+                        });
+                    }
+
+                    // Add a placeholder text part for UI rendering to show a file card
+                    const prefix = parts.some(p => p.type === "text" && p.text.includes("Reference Documents:")) 
+                        ? "" 
+                        : "\n\nReference Documents:";
+                    
+                    parts.push({
+                        type: "text",
+                        text: `${prefix}\n\n<document name="${f.filePath}">\n(Binary file attachment)\n</document>`
+                    });
+                } else {
+              // Only add the header for the first text document to avoid repetition
+              // and ensure renderUserMessage can split correctly
+              const prefix = parts.some(p => p.type === "text" && p.text.includes("Reference Documents:")) 
+                  ? "" 
+                  : "\n\nReference Documents:";
+                  
               parts.push({
                   type: "text",
-                  text: `\n\n<document name="${f.filePath}">\n${f.content || "(No Content)"}\n</document>`
+                  text: `${prefix}\n\n<document name="${f.filePath}">\n${f.content || "(No Content)"}\n</document>`
               });
           }
       });

@@ -122,3 +122,19 @@ export const fetchNoteContent = async (url: string): Promise<string> => {
   if (!res.ok) throw new Error(i18n.t("errors.github.fetchContentFailed"));
   return await res.text();
 };
+
+export const fetchBlobContentAsBase64 = async (url: string): Promise<string> => {
+    const blob = await fetchBlobContent(url);
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            if (typeof reader.result === 'string') {
+                resolve(reader.result);
+            } else {
+                reject(new Error('Failed to convert blob to base64'));
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+};

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RawNoteFile, FileSystemNode, FolderItem, ChatSession } from "../types";
 import { ChatMessage, ToolCall, getTextContent } from "../services/openai";
-import { fetchNoteContent } from "../services/github";
+import { fetchNoteContent, fetchBlobContentAsBase64 } from "../services/github";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useChatContext } from "../contexts/ChatContext";
 import { LoadingAnimation } from "./LoadingAnimation";
@@ -530,8 +530,8 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
     const content = input;
     
-    // Fetch content for selected files if missing
-    const needsFetch = selectedContextFiles.some(file => !file.content && file.blobUrl);
+    // Fetch content for selected files if missing or if it's a blob URL (needs conversion)
+    const needsFetch = selectedContextFiles.some(file => (!file.content || file.content.startsWith("blob:")) && file.blobUrl);
     
     let files = selectedContextFiles;
 
@@ -539,9 +539,25 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
         setIsDownloading(true);
         try {
             files = await Promise.all(selectedContextFiles.map(async (file) => {
-                if (!file.content && file.blobUrl) {
+                if ((!file.content || file.content.startsWith("blob:")) && file.blobUrl) {
                     try {
-                        const text = await fetchNoteContent(file.blobUrl);
+                        const isText = file.mimeType?.startsWith("text/") || 
+                                      file.filePath.endsWith(".md") || 
+                                      file.filePath.endsWith(".json") || 
+                                      file.filePath.endsWith(".ts") || 
+                                      file.filePath.endsWith(".tsx") ||
+                                      file.filePath.endsWith(".js") ||
+                                      file.filePath.endsWith(".txt") ||
+                                      file.filePath.endsWith(".html") ||
+                                      file.filePath.endsWith(".css");
+
+                        let text: string;
+                        if (isText) {
+                            text = await fetchNoteContent(file.blobUrl);
+                        } else {
+                            text = await fetchBlobContentAsBase64(file.blobUrl);
+                        }
+
                         if (onNoteContentLoad) {
                             onNoteContentLoad(file.filePath, text);
                         }
@@ -692,22 +708,21 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   };
 
   const renderUserMessage = (content: string) => {
-    // New format: Text + \n\nReference Documents: + XML docs
-    const parts = content.split("\n\nReference Documents:");
-    const userText = parts[0];
-    const docsSection = parts[1];
+    // Extract <document> tags and their content
+    const docRegex = /<document name="(.*?)">([\s\S]*?)<\/document>/g;
+    const files: { path: string }[] = [];
     
-    let files: { path: string }[] = [];
+    // Replace tags with empty string to clean user text, while extracting file info
+    let userText = content.replace(docRegex, (match, name) => {
+        files.push({ path: name });
+        return ""; // Remove the tag from display
+    });
     
-    if (docsSection) {
-        // Regex to extract file paths from <document name="...">
-        const regex = /<document name="(.*?)">/g;
-        let match;
-        while ((match = regex.exec(docsSection)) !== null) {
-            files.push({ path: match[1] });
-        }
-    } else {
-        // Legacy fallback
+    // Clean up the "Reference Documents:" header if it exists
+    userText = userText.replace(/\n\nReference Documents:\s*$/, "").trim();
+    
+    // Legacy fallback (only if no new tags found)
+    if (files.length === 0) {
         const legacyParts = content.split("\n\n--- File: ");
         if (legacyParts.length > 1) {
              return (
