@@ -340,6 +340,7 @@ const MainLayout: React.FC = () => {
   // --- Resize State (Desktop Only) ---
   const [sidebarWidth, setSidebarWidth] = useState(288);
   const [copilotWidth, setCopilotWidth] = useState(320);
+  const [isResizing, setIsResizing] = useState(false); // Track global resize state for iframe fix
   const isResizingSidebar = useRef(false);
   const isResizingCopilot = useRef(false);
   
@@ -375,6 +376,10 @@ const MainLayout: React.FC = () => {
     };
 
     const handleMouseUp = () => {
+      if (isResizingSidebar.current || isResizingCopilot.current) {
+        setIsResizing(false);
+      }
+      
       if (isResizingSidebar.current) {
         isResizingSidebar.current = false;
         setSidebarWidth(currentSidebarWidthRef.current);
@@ -866,10 +871,11 @@ const MainLayout: React.FC = () => {
         {/* Resizer Handle (Desktop) */}
         {!isMobile && sidebarVisible && (
             <div 
-                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-blue-500/50 transition-colors"
+                className="absolute right-[-8px] top-0 bottom-0 w-4 cursor-col-resize z-50 hover:bg-blue-500/10 transition-colors"
                 onMouseDown={(e) => {
                     e.preventDefault();
                     isResizingSidebar.current = true;
+                    setIsResizing(true);
                     document.body.style.cursor = "col-resize";
                     document.body.style.userSelect = "none";
                 }}
@@ -1430,11 +1436,11 @@ const MainLayout: React.FC = () => {
                                 {note.filePath.endsWith(".html") && viewMode === "preview" ? (
                                 <iframe
                                     srcDoc={note.content}
-                                    className="w-full h-[calc(100vh-4rem)] border-none bg-white"
+                                    className={`w-full h-[calc(100vh-4rem)] border-none bg-white ${isResizing ? "pointer-events-none" : ""}`}
                                     title="Preview"
                                 />
                                 ) : note.filePath.endsWith(".jsx") && viewMode === "preview" ? (
-                                <div className="w-full flex-1 min-h-0">
+                                <div className={`w-full flex-1 min-h-0 ${isResizing ? "pointer-events-none" : ""}`}>
                                     <JSXRenderer
                                         key={`${note.filePath}-${refreshKey}`}
                                         code={note.content}
@@ -1442,7 +1448,7 @@ const MainLayout: React.FC = () => {
                                     />
                                 </div>
                                 ) : note.filePath.endsWith(".vue") && viewMode === "preview" ? (
-                                <div className="w-full flex-1 min-h-0">
+                                <div className={`w-full flex-1 min-h-0 ${isResizing ? "pointer-events-none" : ""}`}>
                                     <VueRenderer
                                         key={`${note.filePath}-${refreshKey}`}
                                         code={note.content}
@@ -1513,6 +1519,7 @@ const MainLayout: React.FC = () => {
           onResizeStart={(e) => {
             e.preventDefault();
             isResizingCopilot.current = true;
+            setIsResizing(true);
             document.body.style.cursor = "col-resize";
             document.body.style.userSelect = "none";
           }}
