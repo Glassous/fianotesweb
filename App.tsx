@@ -14,6 +14,7 @@ import { MarkdownRenderer } from "./components/MarkdownRenderer";
 import { CodeViewer } from "./components/CodeViewer";
 import { JSXRenderer } from "./components/JSXRenderer";
 import { VueRenderer } from "./components/VueRenderer";
+import { PDFViewer } from "./components/PDFViewer";
 import { LoadingAnimation } from "./components/LoadingAnimation";
 import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
@@ -1476,11 +1477,12 @@ const MainLayout: React.FC = () => {
                                     />
                                 </div>
                                 ) : note.filePath.endsWith(".pdf") ? (
-                                <iframe
-                                    src={note.content}
-                                    className={`w-full h-[calc(100vh-4rem)] border-none bg-white ${isResizing ? "pointer-events-none" : ""}`}
-                                    title="PDF Preview"
-                                />
+                                <div className={`w-full h-[calc(100vh-4rem)] bg-white dark:bg-zinc-900 ${isResizing ? "pointer-events-none" : ""}`}>
+                                    <PDFViewer
+                                        file={note.content}
+                                        isDark={isDarkMode}
+                                    />
+                                </div>
                                 ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
                                 <CodeViewer 
                                     content={note.content} 

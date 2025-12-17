@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import "./i18n"; // Initialize i18n
 import App from "./App";
 import { ChatProvider } from "./contexts/ChatContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -12,8 +13,10 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ChatProvider>
-      <App />
-    </ChatProvider>
+    <ErrorBoundary>
+      <ChatProvider>
+        <App />
+      </ChatProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );
