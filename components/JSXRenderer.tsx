@@ -110,7 +110,17 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
           
           function reportError(err) {
             console.error(err);
-            const msg = err instanceof Error ? err.message : String(err);
+            let msg = err instanceof Error ? err.message : String(err);
+            
+            // Enhance network error messages
+            if (
+              msg.includes("Failed to fetch") || 
+              msg.includes("NetworkError") || 
+              msg.includes("dynamically imported module") ||
+              msg.includes("error loading")
+            ) {
+              msg += "\n\n(Network Error: Failed to load external resources. Please check your internet connection. This previewer relies on esm.sh and unpkg.com)";
+            }
             
             // Show in iframe
             errorDisplay.style.display = 'block';
