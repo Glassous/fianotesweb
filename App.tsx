@@ -426,6 +426,33 @@ const MainLayout: React.FC = () => {
   const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // --- Tab Bar Logic ---
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [tabsContainerWidth, setTabsContainerWidth] = useState(0);
+  const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
+  const overflowMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!tabsContainerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setTabsContainerWidth(entry.contentRect.width);
+      }
+    });
+    ro.observe(tabsContainerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (overflowMenuRef.current && !overflowMenuRef.current.contains(event.target as Node)) {
+        setIsOverflowMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Initial Load
   const loadNotes = async () => {
     if (isGitHubConfigured()) {
@@ -579,6 +606,21 @@ const MainLayout: React.FC = () => {
       });
     }
   }, [currentNote]);
+
+  // Effect: Cleanup recent files that no longer exist
+  useEffect(() => {
+    if (notesData.length > 0 && recentFiles.length > 0) {
+      const validRecent = recentFiles.filter(recent => 
+        notesData.some(note => note.filePath === recent.filePath)
+      );
+      
+      if (validRecent.length !== recentFiles.length) {
+        setRecentFiles(validRecent);
+        localStorage.setItem("recentFiles", JSON.stringify(validRecent));
+      }
+    }
+  }, [notesData]); // Run when notesData loads or changes
+
 
   // Effect: Update outline when note content changes
   useEffect(() => {
@@ -972,52 +1014,109 @@ const MainLayout: React.FC = () => {
                       )}
                     </div>
                  ) : (
-                    <div className="flex items-end h-full overflow-x-auto w-full no-scrollbar">
+                    <div 
+                      ref={tabsContainerRef}
+                      className="flex items-end h-full w-full overflow-hidden"
+                    >
                        {openFiles.length === 0 && (
                            <span className="text-zinc-500 dark:text-zinc-400 font-medium px-2 pb-3 self-center">
                              {t('app.title')}
                            </span>
                        )}
-                       {openFiles.map((path, index) => {
-                           const isActive = activeFilePath === path;
-                           const fileName = path.split('/').pop()?.replace(/\.md$/, "");
+                       {(() => {
+                           const minTabWidth = 100;
+                           const overflowBtnWidth = 40;
+                           const totalWidth = tabsContainerWidth || 800;
+                           
+                           let visibleTabs = openFiles;
+                           let overflowTabs: string[] = [];
+                           let showOverflow = false;
+
+                           if (openFiles.length * minTabWidth > totalWidth) {
+                               showOverflow = true;
+                               const availableWidth = totalWidth - overflowBtnWidth;
+                               const maxTabs = Math.max(1, Math.floor(availableWidth / minTabWidth));
+                               visibleTabs = openFiles.slice(0, maxTabs);
+                               overflowTabs = openFiles.slice(maxTabs);
+                           }
+
                            return (
-                               <div 
-                                 key={path}
-                                 onClick={() => navigate(`/note/${path}`)}
-                                 className={`
-                                     group relative flex items-center min-w-[140px] max-w-[200px] h-9 px-3 
-                                     rounded-t-lg cursor-pointer transition-all select-none
-                                     ${isActive 
-                                        ? 'bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 z-10' 
-                                        : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300/50 dark:hover:bg-zinc-800/50 hover:text-zinc-700 dark:hover:text-zinc-200'}
-                                 `}
-                               >
-                                  {/* Separator (only for inactive tabs and not the last one) */}
-                                  {!isActive && index < openFiles.length - 1 && openFiles[index + 1] !== activeFilePath && (
-                                    <div className="absolute right-0 top-2 bottom-2 w-px bg-zinc-300 dark:bg-zinc-700 group-hover:hidden" />
-                                  )}
+                               <>
+                                   {visibleTabs.map((path, index) => {
+                                       const isActive = activeFilePath === path;
+                                       const fileName = path.split('/').pop()?.replace(/\.md$/, "");
+                                       return (
+                                           <div 
+                                             key={path}
+                                             onClick={() => navigate(`/note/${path}`)}
+                                             className={`
+                                                 group relative flex items-center min-w-[100px] max-w-[200px] flex-1 h-9 px-3 
+                                                 rounded-t-lg cursor-pointer transition-all select-none
+                                                 ${isActive 
+                                                    ? 'bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 z-10' 
+                                                    : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300/50 dark:hover:bg-zinc-800/50 hover:text-zinc-700 dark:hover:text-zinc-200'}
+                                             `}
+                                           >
+                                              {/* Separator (only for inactive tabs and not the last one) */}
+                                              {!isActive && index < visibleTabs.length - 1 && visibleTabs[index + 1] !== activeFilePath && (
+                                                <div className="absolute right-0 top-2 bottom-2 w-px bg-zinc-300 dark:bg-zinc-700 group-hover:hidden" />
+                                              )}
 
-                                  {/* Icon */}
-                                  <div className="mr-2 shrink-0 opacity-80">
-                                    {getFileIcon(path, "w-4 h-4")}
-                                  </div>
+                                              {/* Icon */}
+                                              <div className="mr-2 shrink-0 opacity-80">
+                                                {getFileIcon(path, "w-4 h-4")}
+                                              </div>
 
-                                  {/* Title */}
-                                  <span className="truncate text-xs font-medium flex-1 pb-0.5">{fileName}</span>
-                                  
-                                  {/* Close Button */}
-                                  <button
-                                    onClick={(e) => handleCloseTab(e, path)}
-                                    className={`ml-1 p-0.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                                  >
-                                      <CloseIcon className="w-3 h-3" />
-                                  </button>
-                                  
-                                  {/* Curve Connector (Optional, mimicking browser tabs) - Simplified to just rounded corners for now as per image reference it looks like standard rounded tabs but with dark background */}
-                               </div>
+                                              {/* Title */}
+                                              <span className="truncate text-xs font-medium flex-1 pb-0.5">{fileName}</span>
+                                              
+                                              {/* Close Button */}
+                                              <button
+                                                onClick={(e) => handleCloseTab(e, path)}
+                                                className={`ml-1 p-0.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                              >
+                                                  <CloseIcon className="w-3 h-3" />
+                                              </button>
+                                           </div>
+                                       );
+                                   })}
+
+                                   {showOverflow && (
+                                       <div className="relative flex items-center justify-center h-9 w-[40px] border-l border-zinc-200 dark:border-zinc-800 mb-0.5" ref={overflowMenuRef}>
+                                           <button 
+                                               onClick={() => setIsOverflowMenuOpen(!isOverflowMenuOpen)}
+                                               className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-500"
+                                           >
+                                               <ChevronDownIcon className="w-5 h-5" />
+                                           </button>
+                                           
+                                           {isOverflowMenuOpen && (
+                                               <div className="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto p-1">
+                                                   {overflowTabs.map(path => (
+                                                       <div 
+                                                           key={path}
+                                                           className={`flex items-center justify-between p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg cursor-pointer ${activeFilePath === path ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-zinc-700 dark:text-zinc-300'}`}
+                                                           onClick={() => { navigate(`/note/${path}`); setIsOverflowMenuOpen(false); }}
+                                                       >
+                                                            <div className="flex items-center gap-2 truncate">
+                                                                {getFileIcon(path, "w-4 h-4 shrink-0")}
+                                                                <span className="truncate text-sm">{path.split('/').pop()?.replace(/\.md$/, "")}</span>
+                                                            </div>
+                                                            <button 
+                                                                onClick={(e) => handleCloseTab(e, path)}
+                                                                className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-400 hover:text-red-500"
+                                                            >
+                                                                <CloseIcon className="w-3.5 h-3.5"/>
+                                                            </button>
+                                                       </div>
+                                                   ))}
+                                               </div>
+                                           )}
+                                       </div>
+                                   )}
+                               </>
                            );
-                       })}
+                       })()}
                     </div>
                  )}
               </div>
