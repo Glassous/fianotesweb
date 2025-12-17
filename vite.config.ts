@@ -5,7 +5,6 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    base: '/fianotesweb/',
     plugins: [react()],
     define: {
       'process.env.NOTES_REPO_PATH': JSON.stringify(env.NOTES_REPO_PATH),
