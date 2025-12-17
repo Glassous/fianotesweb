@@ -17,6 +17,22 @@ import { VueRenderer } from "./components/VueRenderer";
 import { PDFViewer } from "./components/PDFViewer";
 import { LoadingAnimation } from "./components/LoadingAnimation";
 import { FileTabContent } from "./components/FileTabContent";
+import { SortableTab } from "./components/SortableTab";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { buildFileTree, extractHeadings, getLanguageFromExtension } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
 import { RawNoteFile, NoteItem, OutlineItem } from "./types";
@@ -819,6 +835,30 @@ const MainLayout: React.FC = () => {
     }
   };
 
+  // --- Drag and Drop Logic ---
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setOpenFiles((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
   // Logic to determine if sidebar is visible (Pinned OR Hovered)
   const sidebarVisible = isSidebarOpen || hoverOpen;
 
@@ -1032,44 +1072,32 @@ const MainLayout: React.FC = () => {
 
                            return (
                                <>
-                                   {visibleTabs.map((path, index) => {
-                                       const isActive = activeFilePath === path;
-                                       const fileName = path.split('/').pop()?.replace(/\.md$/, "");
-                                       return (
-                                           <div 
-                                             key={path}
-                                             onClick={() => navigate(`/note/${path}`)}
-                                             className={`
-                                                 group relative flex items-center min-w-[100px] max-w-[200px] flex-1 h-9 px-3 
-                                                 rounded-t-lg cursor-pointer transition-all select-none
-                                                 ${isActive 
-                                                    ? 'bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 z-10' 
-                                                    : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300/50 dark:hover:bg-zinc-800/50 hover:text-zinc-700 dark:hover:text-zinc-200'}
-                                             `}
-                                           >
-                                              {/* Separator (only for inactive tabs and not the last one) */}
-                                              {!isActive && index < visibleTabs.length - 1 && visibleTabs[index + 1] !== activeFilePath && (
-                                                <div className="absolute right-0 top-2 bottom-2 w-px bg-zinc-300 dark:bg-zinc-700 group-hover:hidden" />
-                                              )}
-
-                                              {/* Icon */}
-                                              <div className="mr-2 shrink-0 opacity-80">
-                                                {getFileIcon(path, "w-4 h-4")}
-                                              </div>
-
-                                              {/* Title */}
-                                              <span className="truncate text-xs font-medium flex-1 pb-0.5">{fileName}</span>
-                                              
-                                              {/* Close Button */}
-                                              <button
-                                                onClick={(e) => handleCloseTab(e, path)}
-                                                className={`ml-1 p-0.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                                              >
-                                                  <CloseIcon className="w-3 h-3" />
-                                              </button>
-                                           </div>
-                                       );
-                                   })}
+                                   <DndContext 
+                                     sensors={sensors}
+                                     collisionDetection={closestCenter}
+                                     onDragEnd={handleDragEnd}
+                                   >
+                                     <SortableContext 
+                                       items={visibleTabs}
+                                       strategy={horizontalListSortingStrategy}
+                                     >
+                                       {visibleTabs.map((path, index) => {
+                                           const isActive = activeFilePath === path;
+                                           return (
+                                               <SortableTab
+                                                 key={path}
+                                                 id={path}
+                                                 path={path}
+                                                 isActive={isActive}
+                                                 onNavigate={(p) => navigate(`/note/${p}`)}
+                                                 onClose={handleCloseTab}
+                                                 isLast={index === visibleTabs.length - 1}
+                                                 nextIsActive={visibleTabs[index + 1] === activeFilePath}
+                                               />
+                                           );
+                                       })}
+                                     </SortableContext>
+                                   </DndContext>
 
                                    {showOverflow && (
                                        <div className="relative flex items-center justify-center h-9 w-[40px] border-l border-zinc-200 dark:border-zinc-800 mb-0.5" ref={overflowMenuRef}>
