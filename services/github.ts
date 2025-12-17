@@ -75,12 +75,32 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
     ".sh", ".yaml", ".yml", ".xml",
     ".kt", ".kts", ".php", ".rb", ".cs",
     ".swift", ".lua", ".r", ".dart",
-    ".bat", ".cmd", ".ps1", ".vue"
+    ".bat", ".cmd", ".ps1", ".vue", ".pdf"
   ];
   
   return treeData.tree.filter((item: GitHubTreeItem) => 
     item.type === "blob" && allowedExtensions.some(ext => item.path.endsWith(ext))
   );
+};
+
+export const fetchBlobContent = async (url: string): Promise<Blob> => {
+  if (url.startsWith("/")) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch local content");
+    return await res.blob();
+  }
+
+  const headers: HeadersInit = {
+    Accept: "application/vnd.github.raw", // Request raw content
+  };
+  
+  if (TOKEN) {
+    headers.Authorization = `Bearer ${TOKEN}`;
+  }
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(i18n.t("errors.github.fetchContentFailed"));
+  return await res.blob();
 };
 
 export const fetchNoteContent = async (url: string): Promise<string> => {

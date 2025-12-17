@@ -18,7 +18,7 @@ import { LoadingAnimation } from "./components/LoadingAnimation";
 import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
 import { RawNoteFile, NoteItem, OutlineItem } from "./types";
-import { fetchNotesTree, fetchNoteContent } from "./services/github";
+import { fetchNotesTree, fetchNoteContent, fetchBlobContent } from "./services/github";
 
 import { getFileIcon } from "./components/FileIcons";
 
@@ -731,23 +731,43 @@ const MainLayout: React.FC = () => {
     // If we have a note but no content, and it has a blobUrl (implies GitHub mode)
     if (note && !note.content && note.blobUrl && !contentLoading) {
       setContentLoading(true);
-      fetchNoteContent(note.blobUrl)
-        .then((content) => {
-           // Parse Frontmatter
-           const { data, content: mdContent } = parseFrontmatter(content);
 
-           setNotesData((prev) =>
-            prev.map((n) =>
-              n.filePath === activeFilePath
-                ? { ...n, content: mdContent, metadata: data }
-                : n,
-            ),
-          );
-        })
-        .catch((err) => {
-          console.error("Failed to load content", err);
-        })
-        .finally(() => setContentLoading(false));
+      if (note.filePath.endsWith(".pdf")) {
+         fetchBlobContent(note.blobUrl)
+           .then((blob) => {
+              const pdfBlob = new Blob([blob], { type: "application/pdf" });
+              const url = URL.createObjectURL(pdfBlob);
+              setNotesData((prev) =>
+               prev.map((n) =>
+                 n.filePath === activeFilePath
+                   ? { ...n, content: url }
+                   : n,
+               ),
+             );
+           })
+          .catch((err) => {
+            console.error("Failed to load PDF content", err);
+          })
+          .finally(() => setContentLoading(false));
+      } else {
+        fetchNoteContent(note.blobUrl)
+          .then((content) => {
+             // Parse Frontmatter
+             const { data, content: mdContent } = parseFrontmatter(content);
+  
+             setNotesData((prev) =>
+              prev.map((n) =>
+                n.filePath === activeFilePath
+                  ? { ...n, content: mdContent, metadata: data }
+                  : n,
+              ),
+            );
+          })
+          .catch((err) => {
+            console.error("Failed to load content", err);
+          })
+          .finally(() => setContentLoading(false));
+      }
     }
   }, [activeFilePath, notesData]); // Note: This dependency array is safe because we check !note.content
 
@@ -1455,6 +1475,12 @@ const MainLayout: React.FC = () => {
                                         isDark={isDarkMode}
                                     />
                                 </div>
+                                ) : note.filePath.endsWith(".pdf") ? (
+                                <iframe
+                                    src={note.content}
+                                    className={`w-full h-[calc(100vh-4rem)] border-none bg-white ${isResizing ? "pointer-events-none" : ""}`}
+                                    title="PDF Preview"
+                                />
                                 ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
                                 <CodeViewer 
                                     content={note.content} 

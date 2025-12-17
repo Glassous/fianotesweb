@@ -9,6 +9,7 @@ import {
   VscCode,
   VscTerminal,
   VscDatabase,
+  VscFilePdf,
 } from "react-icons/vsc";
 import { FaJava } from "react-icons/fa";
 import {
@@ -138,6 +139,10 @@ export const getFileIcon = (fileName: string, className?: string) => {
     case "svg":
     case "ico":
       return <VscFileMedia className={`${cls} text-purple-400`} />;
+
+    // Documents
+    case "pdf":
+      return <VscFilePdf className={`${cls} text-red-500`} />;
 
     default:
       return <VscFile className={`${cls} text-zinc-400`} />;
