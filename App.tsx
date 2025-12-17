@@ -1022,8 +1022,8 @@ const MainLayout: React.FC = () => {
            </div>
 
           <div className="flex items-center gap-2 shrink-0 mb-1.5">
-            {/* HTML Preview Toggle */}
-            {currentNote && currentNote.filePath.endsWith(".html") && (
+            {/* HTML/JSX Preview Toggle */}
+            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx")) && (
               <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
                 <button
                   onClick={() => setViewMode("preview")}
@@ -1324,11 +1324,11 @@ const MainLayout: React.FC = () => {
                     <div 
                         key={filePath}
                         id={`scroll-container-${filePath}`}
-                        className={`w-full h-full overflow-y-auto scroll-smooth absolute inset-0 bg-gray-50 dark:bg-zinc-950 ${isActive ? 'z-10' : 'z-0 invisible'}`}
+                        className={`w-full h-full absolute inset-0 bg-gray-50 dark:bg-zinc-950 flex flex-col ${isActive ? 'z-10' : 'z-0 invisible'}`}
                     >
                         {note?.content ? (
-                            <div className="w-full min-h-full">
-                            <div className="mx-auto w-full">
+                            <div className="w-full h-full flex flex-col">
+                            <div className="mx-auto w-full flex-1 flex flex-col">
                                 {note.filePath.endsWith(".html") && viewMode === "preview" ? (
                                 <iframe
                                     srcDoc={note.content}
@@ -1336,11 +1336,13 @@ const MainLayout: React.FC = () => {
                                     title="Preview"
                                 />
                                 ) : note.filePath.endsWith(".jsx") && viewMode === "preview" ? (
-                                <JSXRenderer
-                                    key={`${note.filePath}-${refreshKey}`}
-                                    code={note.content}
-                                    isDark={isDarkMode}
-                                />
+                                <div className="w-full flex-1 min-h-0">
+                                    <JSXRenderer
+                                        key={`${note.filePath}-${refreshKey}`}
+                                        code={note.content}
+                                        isDark={isDarkMode}
+                                    />
+                                </div>
                                 ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
                                 <CodeViewer 
                                     content={note.content} 

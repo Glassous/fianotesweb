@@ -8,12 +8,34 @@ interface JSXRendererProps {
 
 export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Reset state when code changes
+    setLoading(true);
+    setError(null);
+
+    const handleMessage = (event: MessageEvent) => {
+      // Security: In production, check event.origin if possible.
+      // For srcDoc sandboxed iframe, origin might be "null" or unique.
+      
+      const { type, payload } = event.data;
+      
+      if (type === 'JSX_RENDER_READY') {
+        setLoading(false);
+      } else if (type === 'JSX_RENDER_ERROR') {
+        setLoading(false);
+        setError(payload);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [code]);
 
   // Construct the HTML content for the iframe
   const getIframeContent = () => {
-    // Escape backticks and other special characters in the user code to safely inject it into the template string
-    // Also escape closing script tags to prevent breaking the HTML
     const safeCode = code
       .replace(/\\/g, '\\\\')
       .replace(/`/g, '\\`')
@@ -27,29 +49,34 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>JSX Preview</title>
-        <!-- Load React, ReactDOM, and Babel -->
-        <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-        <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
         
+        <!-- Import Map for consistent React versions -->
+        <script type="importmap">
+        {
+          "imports": {
+            "react": "https://esm.sh/react@18.2.0?dev",
+            "react-dom": "https://esm.sh/react-dom@18.2.0?dev",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
+            "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime?dev"
+          }
+        }
+        </script>
+
         <style>
           body {
             margin: 0;
-            padding: 20px;
+            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            color: ${isDark ? '#e4e4e7' : '#27272a'}; /* zinc-200 : zinc-800 */
-            background-color: ${isDark ? '#09090b' : '#ffffff'}; /* zinc-950 : white */
+            color: ${isDark ? '#e4e4e7' : '#27272a'};
+            background-color: ${isDark ? '#09090b' : '#ffffff'};
             transition: color 0.2s, background-color 0.2s;
+            overflow-x: hidden;
           }
           
-          /* Custom Scrollbar to match app */
-          ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-          }
-          ::-webkit-scrollbar-track {
-            background: transparent;
-          }
+          ::-webkit-scrollbar { width: 8px; height: 8px; }
+          ::-webkit-scrollbar-track { background: transparent; }
           ::-webkit-scrollbar-thumb {
             background: ${isDark ? '#3f3f46' : '#d4d4d8'};
             border-radius: 4px;
@@ -58,7 +85,7 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
             background: ${isDark ? '#52525b' : '#a1a1aa'};
           }
 
-          #error-container {
+          #error-display {
             display: none;
             color: #ef4444;
             background: ${isDark ? 'rgba(127, 29, 29, 0.2)' : '#fee2e2'};
@@ -68,76 +95,123 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
             font-family: monospace;
             white-space: pre-wrap;
             margin-bottom: 1rem;
+            word-break: break-all;
+            font-size: 14px;
           }
         </style>
       </head>
       <body>
-        <div id="error-container"></div>
+        <div id="error-display"></div>
         <div id="root"></div>
 
-        <script>
-          const errorContainer = document.getElementById('error-container');
+        <script type="module">
+          // --- Error Handling & Messaging ---
+          const errorDisplay = document.getElementById('error-display');
           
-          function showError(err) {
+          function reportError(err) {
             console.error(err);
-            errorContainer.style.display = 'block';
-            errorContainer.textContent = err.toString();
+            const msg = err instanceof Error ? err.message : String(err);
+            
+            // Show in iframe
+            errorDisplay.style.display = 'block';
+            errorDisplay.textContent = msg;
+            
+            // Notify parent
+            window.parent.postMessage({ type: 'JSX_RENDER_ERROR', payload: msg }, '*');
           }
 
           window.onerror = function(message, source, lineno, colno, error) {
-            showError(message + ' (' + lineno + ':' + colno + ')');
+            reportError(message + ' (' + lineno + ':' + colno + ')');
           };
 
           window.addEventListener('unhandledrejection', function(event) {
-            showError('Unhandled Promise Rejection: ' + event.reason);
+            reportError('Unhandled Promise Rejection: ' + event.reason);
           });
 
-          try {
-            // User code from parent
-            const userCode = \`${safeCode}\`;
+          // --- Polyfills / Env ---
+          window.process = { env: { NODE_ENV: 'development' } };
 
-            // Babel Transform
-            // We use 'react' preset. We also enable 'env' for modern JS features if needed, 
-            // but strict 'react' might be faster/simpler. 
-            // Let's use both to ensure standard JS works.
-            const output = Babel.transform(userCode, {
-              presets: ['react', 'env'],
-              filename: 'note.jsx',
-            });
-
-            const compiledCode = output.code;
-
-            // Prepare CommonJS-like environment
-            const exports = {};
-            const module = { exports: {} };
-            
-            // Mock require (we don't support imports, but just in case user tries)
-            const require = (mod) => {
-              if (mod === 'react') return React;
-              if (mod === 'react-dom') return ReactDOM;
-              throw new Error(\`Module '\${mod}' not found. External imports are not supported in this environment.\`);
+          // --- Babel Plugin: Transform Imports ---
+          function transformImportSource(babel) {
+            return {
+              visitor: {
+                ImportDeclaration(path) {
+                  const source = path.node.source;
+                  if (!source.value.startsWith(".") && !source.value.startsWith("/") && !source.value.startsWith("http")) {
+                    // Skip react packages as they are handled by importmap
+                    if (source.value !== 'react' && source.value !== 'react-dom' && source.value !== 'react-dom/client' && source.value !== 'react/jsx-runtime') {
+                        // Mark react as external so esm.sh doesn't bundle it, allowing it to use our importmap version
+                        source.value = \`https://esm.sh/\${source.value}?dev&external=react,react-dom\`;
+                    }
+                  }
+                },
+              },
             };
-
-            // Execute compiled code
-            // We wrap in a function to isolate scope and inject dependencies
-            const run = new Function('React', 'ReactDOM', 'module', 'exports', 'require', compiledCode);
-            run(React, ReactDOM, module, exports, require);
-
-            // Get the default export
-            const DefaultComponent = module.exports.default || module.exports;
-
-            if (!DefaultComponent || (typeof DefaultComponent !== 'function' && typeof DefaultComponent !== 'object')) {
-              throw new Error("The JSX file must default export a React component.");
-            }
-
-            // Render
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            // If it's a function component or class component
-            root.render(React.createElement(DefaultComponent));
-
-          } catch (err) {
-            showError(err);
           }
+
+          if (window.Babel) {
+            Babel.registerPlugin("transform-import-source", transformImportSource);
+          } else {
+            reportError("Babel failed to load.");
+          }
+
+          // --- Main Execution ---
+          async function run() {
+            try {
+              const userCode = \`${safeCode}\`;
+              
+              // 1. Compile
+              const output = Babel.transform(userCode, {
+                presets: [
+                  ["react", { runtime: "automatic" }]
+                ],
+                plugins: ["transform-import-source"],
+                filename: "note.jsx",
+              });
+
+              // 2. Load Modules
+              const encodedCode = encodeURIComponent(output.code);
+              const dataUrl = \`data:text/javascript;charset=utf-8,\${encodedCode}\`;
+
+              // Load React from importmap to ensure single instance
+              const React = await import("react");
+              const ReactDOM = await import("react-dom/client");
+              
+              const { createRoot } = ReactDOM;
+              const { createElement, isValidElement } = React;
+
+              // 3. Import User Component
+              const userModule = await import(dataUrl);
+              const DefaultExport = userModule.default;
+
+              if (!DefaultExport) {
+                throw new Error("No default export found. Please export a React component or element as default.");
+              }
+
+              // 4. Render
+              const root = createRoot(document.getElementById("root"));
+              
+              // Robust rendering logic:
+              if (isValidElement(DefaultExport)) {
+                 root.render(DefaultExport);
+              } else if (typeof DefaultExport === 'function') {
+                 root.render(createElement(DefaultExport));
+              } else {
+                 // Fallback for other types
+                 root.render(DefaultExport);
+              }
+              
+              // 5. Signal Ready
+              setTimeout(() => {
+                 window.parent.postMessage({ type: 'JSX_RENDER_READY' }, '*');
+              }, 100);
+
+            } catch (err) {
+              reportError(err);
+            }
+          }
+
+          run();
         </script>
       </body>
       </html>
@@ -145,17 +219,43 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-zinc-950">
+    <div className="w-full h-full relative bg-white dark:bg-zinc-950">
+      {/* Loading Overlay */}
+      {loading && !error && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm transition-all duration-300">
+          <LoadingAnimation size="lg" color="bg-blue-500" />
+          <p className="mt-4 text-sm text-zinc-500 font-medium animate-pulse">
+            Compiling & Loading Modules...
+          </p>
+        </div>
+      )}
+
+      {/* Error Overlay (if iframe fails to catch it or for logic errors) */}
+      {error && (
+        <div className="absolute inset-0 z-20 p-8 bg-white dark:bg-zinc-950">
+          <div className="max-w-2xl mx-auto">
+             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-2">Runtime Error</h3>
+                <pre className="text-sm font-mono whitespace-pre-wrap text-red-600 dark:text-red-300 break-all">
+                  {error}
+                </pre>
+             </div>
+             <button 
+               onClick={() => window.location.reload()} // Simple refresh fallback
+               className="mt-4 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md text-sm font-medium transition-colors"
+             >
+               Reload Application
+             </button>
+          </div>
+        </div>
+      )}
+
       <iframe
         ref={iframeRef}
         srcDoc={getIframeContent()}
         title="JSX Preview"
-        className="w-full h-full flex-1 border-none"
-        sandbox="allow-scripts allow-same-origin allow-modals" // allow-same-origin needed for React to work properly in some cases? 
-        // Actually, allow-same-origin allows accessing parent if not careful, but srcDoc is unique origin usually.
-        // But for safety, strict sandbox is better. React needs 'allow-scripts'.
-        // 'allow-same-origin' is required if we want to use local storage or such, but maybe not needed for basic render.
-        // Let's stick to safe defaults.
+        className="w-full h-full border-none"
+        sandbox="allow-scripts allow-popups allow-forms allow-same-origin"
       />
     </div>
   );
