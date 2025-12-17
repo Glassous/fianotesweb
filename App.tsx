@@ -1457,7 +1457,7 @@ const MainLayout: React.FC = () => {
                                 {note.filePath.endsWith(".html") && viewMode === "preview" ? (
                                 <iframe
                                     srcDoc={note.content}
-                                    className={`w-full h-[calc(100vh-4rem)] border-none bg-white ${isResizing ? "pointer-events-none" : ""}`}
+                                    className={`w-full h-full border-none bg-white ${isResizing ? "pointer-events-none" : ""}`}
                                     title="Preview"
                                 />
                                 ) : note.filePath.endsWith(".jsx") && viewMode === "preview" ? (
@@ -1477,7 +1477,7 @@ const MainLayout: React.FC = () => {
                                     />
                                 </div>
                                 ) : note.filePath.endsWith(".pdf") ? (
-                                <div className={`w-full h-[calc(100vh-4rem)] bg-white dark:bg-zinc-900 ${isResizing ? "pointer-events-none" : ""}`}>
+                                <div className={`w-full h-full bg-white dark:bg-zinc-900 ${isResizing ? "pointer-events-none" : ""}`}>
                                     <PDFViewer
                                         file={note.content}
                                         isDark={isDarkMode}
@@ -1499,20 +1499,7 @@ const MainLayout: React.FC = () => {
                                 )}
                             </div>
 
-                            {(!getLanguageFromExtension(note.filePath) || note.filePath.endsWith(".html") || note.filePath.endsWith(".jsx") || note.filePath.endsWith(".vue")) && (!note.filePath.endsWith(".html") && !note.filePath.endsWith(".jsx") && !note.filePath.endsWith(".vue") || viewMode === "source") && (
-                                <div className="p-8 max-w-4xl mx-auto border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-12 transition-colors">
-                                <div className="flex flex-wrap gap-2">
-                                    {note.metadata?.tags?.map((tag: string) => (
-                                    <span
-                                        key={tag}
-                                        className="text-xs font-mono bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/50"
-                                    >
-                                        #{tag}
-                                    </span>
-                                    ))}
-                                </div>
-                                </div>
-                            )}
+
                             </div>
                         ) : (
                             <div className="p-8 max-w-4xl mx-auto space-y-8 mt-8">
