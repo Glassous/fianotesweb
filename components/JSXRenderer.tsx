@@ -36,11 +36,9 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
 
   // Construct the HTML content for the iframe
   const getIframeContent = () => {
-    const safeCode = code
-      .replace(/\\/g, '\\\\')
-      .replace(/`/g, '\\`')
-      .replace(/\$/g, '\\$')
-      .replace(/<\/script>/g, '<\\/script>');
+    // Use JSON.stringify for robust string escaping, preventing syntax errors from user code
+    // We must still escape </script> to prevent it from closing the script tag prematurely
+    const jsonCode = JSON.stringify(code).replace(/<\/script>/g, '<\\/script>');
     
     return `
       <!DOCTYPE html>
@@ -49,7 +47,22 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>JSX Preview</title>
-        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        
+        <!-- Global Error Handler (Early) -->
+        <script>
+          window.onerror = function(msg, url, line, col, error) {
+            const errorMsg = msg + ' (' + line + ':' + col + ')';
+            console.error('Preview Error:', errorMsg);
+            // Try to notify parent
+            try { window.parent.postMessage({ type: 'JSX_RENDER_ERROR', payload: errorMsg }, '*'); } catch(e) {}
+            // Show in DOM if possible
+            const el = document.getElementById('error-display');
+            if (el) { el.style.display = 'block'; el.textContent = errorMsg; }
+          };
+        </script>
+
+        <!-- Use jsDelivr for better performance/reliability than unpkg -->
+        <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.6/babel.min.js"></script>
         <script src="https://cdn.tailwindcss.com"></script>
         
         <!-- Import Map for consistent React versions -->
@@ -97,6 +110,8 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
             margin-bottom: 1rem;
             word-break: break-all;
             font-size: 14px;
+            z-index: 50;
+            position: relative;
           }
         </style>
       </head>
@@ -117,9 +132,10 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
               msg.includes("Failed to fetch") || 
               msg.includes("NetworkError") || 
               msg.includes("dynamically imported module") ||
-              msg.includes("error loading")
+              msg.includes("error loading") ||
+              msg.includes("Load failed")
             ) {
-              msg += "\n\n(Network Error: Failed to load external resources. Please check your internet connection. This previewer relies on esm.sh and unpkg.com)";
+              msg += "\\n\\n(Network Error: Failed to load external resources. Please check your internet connection. This previewer relies on esm.sh and cdn.jsdelivr.net)";
             }
             
             // Show in iframe
@@ -129,10 +145,6 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
             // Notify parent
             window.parent.postMessage({ type: 'JSX_RENDER_ERROR', payload: msg }, '*');
           }
-
-          window.onerror = function(message, source, lineno, colno, error) {
-            reportError(message + ' (' + lineno + ':' + colno + ')');
-          };
 
           window.addEventListener('unhandledrejection', function(event) {
             reportError('Unhandled Promise Rejection: ' + event.reason);
@@ -151,6 +163,7 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
                     // Skip react packages as they are handled by importmap
                     if (source.value !== 'react' && source.value !== 'react-dom' && source.value !== 'react-dom/client' && source.value !== 'react/jsx-runtime') {
                         // Mark react as external so esm.sh doesn't bundle it, allowing it to use our importmap version
+                        // Note: backticks must be escaped in the template string
                         source.value = \`https://esm.sh/\${source.value}?dev&external=react,react-dom\`;
                     }
                   }
@@ -160,16 +173,23 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
           }
 
           if (window.Babel) {
-            Babel.registerPlugin("transform-import-source", transformImportSource);
+            try {
+              Babel.registerPlugin("transform-import-source", transformImportSource);
+            } catch (e) {
+              reportError("Failed to register Babel plugin: " + e.message);
+            }
           } else {
-            reportError("Babel failed to load.");
+            reportError("Babel failed to load. Check network connection.");
           }
 
           // --- Main Execution ---
           async function run() {
             try {
-              const userCode = \`${safeCode}\`;
+              // Inject user code safely
+              const userCode = ${jsonCode};
               
+              if (!window.Babel) return;
+
               // 1. Compile
               const output = Babel.transform(userCode, {
                 presets: [
@@ -198,23 +218,19 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
                 throw new Error("No default export found. Please export a React component or element as default.");
               }
 
-              // 4. Render
-              const root = createRoot(document.getElementById("root"));
-              
-              // Robust rendering logic:
+              const rootElement = document.getElementById("root");
+              const root = createRoot(rootElement);
+
               if (isValidElement(DefaultExport)) {
-                 root.render(DefaultExport);
+                root.render(DefaultExport);
               } else if (typeof DefaultExport === 'function') {
-                 root.render(createElement(DefaultExport));
+                root.render(createElement(DefaultExport));
               } else {
-                 // Fallback for other types
-                 root.render(DefaultExport);
+                 throw new Error("Default export is not a valid React component or element.");
               }
               
-              // 5. Signal Ready
-              setTimeout(() => {
-                 window.parent.postMessage({ type: 'JSX_RENDER_READY' }, '*');
-              }, 100);
+              // Notify success
+              window.parent.postMessage({ type: 'JSX_RENDER_READY' }, '*');
 
             } catch (err) {
               reportError(err);
