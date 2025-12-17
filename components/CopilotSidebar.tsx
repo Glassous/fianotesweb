@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RawNoteFile, FileSystemNode, FolderItem, ChatSession } from "../types";
-import { ChatMessage, ToolCall } from "../services/openai";
+import { ChatMessage, ToolCall, getTextContent } from "../services/openai";
 import { fetchNoteContent } from "../services/github";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useChatContext } from "../contexts/ChatContext";
@@ -335,13 +335,13 @@ const ToolSequence = ({ messages, isDarkMode }: { messages: ChatMessage[], isDar
                         ))}
                         {msg.content && (
                              <div className="mb-2 text-sm text-zinc-600 dark:text-zinc-300">
-                                 <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />
+                                 <MarkdownRenderer content={getTextContent(msg.content)} isDark={isDarkMode} variant="chat" />
                              </div>
                         )}
                     </>
                 )}
                 {msg.role === 'tool' && (
-                    <ToolOutputView name={msg.name} content={msg.content || ''} />
+                    <ToolOutputView name={msg.name} content={getTextContent(msg.content) || ''} />
                 )}
              </div>
            ))}
@@ -430,7 +430,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
       if (msg.role !== 'user') return;
       
       // Check for new format
-      const parts = (msg.content || "").split("\n\nReference Documents:");
+      const parts = getTextContent(msg.content).split("\n\nReference Documents:");
       if (parts.length > 1) {
         const docsSection = parts[1];
         const regex = /<document name="(.*?)">/g;
@@ -441,9 +441,9 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
       }
 
       // Check for legacy format fallback
-      const legacyParts = (msg.content || "").split("\n\n--- File: ");
+      const legacyParts = getTextContent(msg.content).split("\n\n--- File: ");
       if (legacyParts.length > 1) {
-          legacyParts.slice(1).forEach(part => {
+          legacyParts.slice(1).forEach((part: string) => {
               const path = part.split(" ---\n")[0];
               if (path) files.add(path);
           });
@@ -488,19 +488,32 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isText = file.type.startsWith("text/") || 
+                   file.name.endsWith(".md") || 
+                   file.name.endsWith(".json") || 
+                   file.name.endsWith(".ts") || 
+                   file.name.endsWith(".tsx") ||
+                   file.name.endsWith(".js");
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
       const tempNote: RawNoteFile = {
           filePath: `Local: ${file.name}`,
           content: content,
-          metadata: { title: file.name }
+          metadata: { title: file.name },
+          mimeType: file.type || (isText ? "text/plain" : "application/octet-stream")
       };
       addFileContext(tempNote);
       setIsSelectingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     };
-    reader.readAsText(file);
+
+    if (isText) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsDataURL(file);
+    }
   };
 
   // Auto-resize textarea
@@ -908,14 +921,14 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                                 >
                                     {msg.role === "user" ? (
                                         <div className="max-w-[90%] rounded-lg p-3 text-sm bg-blue-600 text-white">
-                                            {renderUserMessage(msg.content || "")}
+                                            {renderUserMessage(getTextContent(msg.content))}
                                         </div>
                                     ) : (
                                         <div className="w-full text-sm text-zinc-800 dark:text-zinc-200 px-1">
-                                            {msg.content && <MarkdownRenderer content={msg.content} isDark={isDarkMode} variant="chat" />}
+                                            {msg.content && <MarkdownRenderer content={getTextContent(msg.content)} isDark={isDarkMode} variant="chat" />}
                                             <div className="flex items-center gap-3 mt-2 select-none">
                                                 <button 
-                                                    onClick={() => handleCopy(msg.content || "")}
+                                                    onClick={() => handleCopy(getTextContent(msg.content))}
                                                     className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
                                                     title={t('common.copy')}
                                                 >

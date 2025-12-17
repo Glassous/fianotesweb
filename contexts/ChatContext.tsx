@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
-import { streamChatCompletion, ChatMessage, StreamUpdate, ToolCall } from "../services/openai";
+import { streamChatCompletion, ChatMessage, StreamUpdate, ToolCall, ContentPart, getTextContent } from "../services/openai";
 import { RawNoteFile } from "../types";
 import { fetchNoteContent } from "../services/github";
 import { useTranslation } from "react-i18next";
@@ -141,7 +141,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if ((s.title === "New Chat" || s.title.endsWith("...")) && newMessages.length > 0) {
              const firstUser = newMessages.find(m => m.role === "user");
              if (firstUser) {
-                 const text = (firstUser.content || "").split("\n\n--- File:")[0];
+                 const text = getTextContent(firstUser.content).split("\n\n--- File:")[0];
                  const candidateTitle = text.slice(0, 30) + (text.length > 30 ? "..." : "");
                  if (candidateTitle) title = candidateTitle;
              }
@@ -324,23 +324,49 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const sendMessage = useCallback(async (content: string, contextFiles: RawNoteFile[]) => {
     if (isLoading) return;
 
-    let userContent = content;
+    let messageContent: string | ContentPart[] = content;
+
     if (contextFiles.length > 0) {
       selectedContextRef.current = contextFiles;
-      const contextStr = contextFiles
-        .map(f => `\n\n<document name="${f.filePath}">\n${f.content || "(No Content)"}\n</document>`)
-        .join("");
-      userContent += `\n\nReference Documents:${contextStr}`;
+      
+      const parts: ContentPart[] = [];
+      if (content) {
+          parts.push({ type: "text", text: content });
+      }
+
+      contextFiles.forEach(f => {
+          const isDataUrl = f.content?.startsWith("data:");
+          if (isDataUrl && f.content) {
+              parts.push({
+                  type: "image_url",
+                  image_url: { url: f.content }
+              });
+          } else {
+              parts.push({
+                  type: "text",
+                  text: `\n\n<document name="${f.filePath}">\n${f.content || "(No Content)"}\n</document>`
+              });
+          }
+      });
+      messageContent = parts;
     }
 
-    const userMsg: ChatMessage = { role: "user", content: userContent };
+    const userMsg: ChatMessage = { role: "user", content: messageContent };
     
     let activeId = currentSessionIdRef.current;
     let currentMsgs = messages;
 
     // If no session, create one
     if (!activeId) {
-      const title = userContent.slice(0, 30) + (userContent.length > 30 ? "..." : "");
+      let titleText = "";
+      if (typeof messageContent === "string") {
+          titleText = messageContent;
+      } else {
+          const textPart = messageContent.find(p => p.type === "text") as { type: "text"; text: string } | undefined;
+          titleText = textPart?.text || "New Chat";
+      }
+      const title = titleText.slice(0, 30) + (titleText.length > 30 ? "..." : "");
+      
       currentMsgs = [userMsg];
       activeId = createNewSession(currentMsgs, title);
     } else {

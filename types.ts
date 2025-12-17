@@ -32,6 +32,7 @@ export interface RawNoteFile {
   metadata?: NoteMetadata;
   sha?: string;
   blobUrl?: string;
+  mimeType?: string;
 }
 
 export interface OutlineItem {

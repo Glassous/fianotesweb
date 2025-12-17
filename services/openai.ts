@@ -2,11 +2,26 @@ import i18n from "../i18n";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
+  content: string | ContentPart[] | null;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
 }
+
+export type ContentPart = 
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string; detail?: "auto" | "low" | "high" } };
+
+
+export const getTextContent = (content: string | ContentPart[] | null | undefined): string => {
+  if (!content) return "";
+  if (typeof content === "string") return content;
+  return content
+    .filter(part => part.type === "text")
+    .map(part => (part as { type: "text"; text: string }).text)
+    .join("");
+};
+
 
 export interface ToolCall {
   id: string;
