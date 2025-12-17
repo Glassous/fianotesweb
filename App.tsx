@@ -16,7 +16,8 @@ import { JSXRenderer } from "./components/JSXRenderer";
 import { VueRenderer } from "./components/VueRenderer";
 import { PDFViewer } from "./components/PDFViewer";
 import { LoadingAnimation } from "./components/LoadingAnimation";
-import { buildFileTree, extractHeadings } from "./utils/transform";
+import { FileTabContent } from "./components/FileTabContent";
+import { buildFileTree, extractHeadings, getLanguageFromExtension } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
 import { RawNoteFile, NoteItem, OutlineItem } from "./types";
 import { fetchNotesTree, fetchNoteContent, fetchBlobContent } from "./services/github";
@@ -227,39 +228,6 @@ const RefreshIcon = () => (
 );
 
 type ThemeMode = "system" | "light" | "dark";
-
-// Helper to determine language from extension
-const getLanguageFromExtension = (filePath: string): string | null => {
-  const ext = filePath.split(".").pop()?.toLowerCase();
-  switch (ext) {
-    case "c": return "c";
-    case "cpp": case "h": case "hpp": return "cpp";
-    case "java": return "java";
-    case "py": return "python";
-    case "js": case "jsx": return "javascript";
-    case "ts": case "tsx": return "typescript";
-    case "sql": return "sql";
-    case "css": return "css";
-    case "json": return "json";
-    case "go": return "go";
-    case "rs": return "rust";
-    case "sh": return "bash";
-    case "yaml": case "yml": return "yaml";
-    case "xml": return "xml";
-    case "kt": case "kts": return "kotlin";
-    case "php": return "php";
-    case "rb": return "ruby";
-    case "cs": return "csharp";
-    case "swift": return "swift";
-    case "lua": return "lua";
-    case "r": return "r";
-    case "dart": return "dart";
-    case "bat": case "cmd": return "batch";
-    case "ps1": return "powershell";
-    case "vue": return "xml";
-    default: return null;
-  }
-};
 
 interface RecentFile {
   filePath: string;
@@ -1444,78 +1412,17 @@ const MainLayout: React.FC = () => {
                 const isActive = filePath === activeFilePath;
                 
                 return (
-                    <div 
+                    <FileTabContent
                         key={filePath}
-                        className={`w-full h-full absolute inset-0 bg-gray-50 dark:bg-zinc-950 flex flex-col ${isActive ? 'z-10' : 'z-0 invisible'}`}
-                    >
-                        {note?.content ? (
-                            <div 
-                                id={`scroll-container-${filePath}`}
-                                className="w-full h-full flex flex-col overflow-y-auto"
-                            >
-                            <div className="mx-auto w-full flex-1 flex flex-col">
-                                {note.filePath.endsWith(".html") && viewMode === "preview" ? (
-                                <iframe
-                                    srcDoc={note.content}
-                                    className={`w-full h-full border-none bg-white ${isResizing ? "pointer-events-none" : ""}`}
-                                    title="Preview"
-                                />
-                                ) : note.filePath.endsWith(".jsx") && viewMode === "preview" ? (
-                                <div className={`w-full flex-1 min-h-0 ${isResizing ? "pointer-events-none" : ""}`}>
-                                    <JSXRenderer
-                                        key={`${note.filePath}-${refreshKey}`}
-                                        code={note.content}
-                                        isDark={isDarkMode}
-                                    />
-                                </div>
-                                ) : note.filePath.endsWith(".vue") && viewMode === "preview" ? (
-                                <div className={`w-full flex-1 min-h-0 ${isResizing ? "pointer-events-none" : ""}`}>
-                                    <VueRenderer
-                                        key={`${note.filePath}-${refreshKey}`}
-                                        code={note.content}
-                                        isDark={isDarkMode}
-                                    />
-                                </div>
-                                ) : note.filePath.endsWith(".pdf") ? (
-                                <div className={`w-full h-full bg-white dark:bg-zinc-900 ${isResizing ? "pointer-events-none" : ""}`}>
-                                    <PDFViewer
-                                        file={note.content}
-                                        isDark={isDarkMode}
-                                    />
-                                </div>
-                                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
-                                <CodeViewer 
-                                    content={note.content} 
-                                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : note.filePath.endsWith(".vue") ? "xml" : getLanguageFromExtension(note.filePath)!} 
-                                    isDark={isDarkMode}
-                                />
-                                ) : (
-                                <MarkdownRenderer 
-                                    content={note.content} 
-                                    isDark={isDarkMode} 
-                                    onSelectionAction={handleAskCopilot}
-                                    onInternalLinkClick={handleHeadingClick}
-                                />
-                                )}
-                            </div>
-
-
-                            </div>
-                        ) : (
-                            <div className="p-8 max-w-4xl mx-auto space-y-8 mt-8">
-                                <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4 animate-pulse"></div>
-                                <div className="space-y-3">
-                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
-                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
-                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-5/6 animate-pulse"></div>
-                                </div>
-                                <div className="space-y-3 pt-4">
-                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-full animate-pulse"></div>
-                                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-4/6 animate-pulse"></div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        filePath={filePath}
+                        isActive={isActive}
+                        note={note}
+                        viewMode={viewMode}
+                        isResizing={isResizing}
+                        refreshKey={refreshKey}
+                        isDarkMode={isDarkMode}
+                        onAskCopilot={handleAskCopilot}
+                    />
                 );
             })
           )}

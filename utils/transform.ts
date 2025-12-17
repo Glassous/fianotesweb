@@ -102,26 +102,44 @@ export const buildFileTree = (rawFiles: RawNoteFile[]): FolderItem => {
           };
           currentLevel.push(folderNode);
         }
+
         currentLevel = folderNode.children;
       }
     });
   });
 
-  // Sort: Folders first, then Files. Alphabetical within groups.
-  const sortNodes = (nodes: (NoteItem | FolderItem)[]) => {
-    nodes.sort((a, b) => {
-      if (a.type === b.type) {
-        return a.name.localeCompare(b.name);
-      }
-      return a.type === "folder" ? -1 : 1;
-    });
-    nodes.forEach((node) => {
-      if (node.type === "folder") {
-        sortNodes(node.children);
-      }
-    });
-  };
-
-  sortNodes(root.children);
   return root;
+};
+
+// Helper to determine language from extension
+export const getLanguageFromExtension = (filePath: string): string | null => {
+  const ext = filePath.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "c": return "c";
+    case "cpp": case "h": case "hpp": return "cpp";
+    case "java": return "java";
+    case "py": return "python";
+    case "js": case "jsx": return "javascript";
+    case "ts": case "tsx": return "typescript";
+    case "sql": return "sql";
+    case "css": return "css";
+    case "json": return "json";
+    case "go": return "go";
+    case "rs": return "rust";
+    case "sh": return "bash";
+    case "yaml": case "yml": return "yaml";
+    case "xml": return "xml";
+    case "kt": case "kts": return "kotlin";
+    case "php": return "php";
+    case "rb": return "ruby";
+    case "cs": return "csharp";
+    case "swift": return "swift";
+    case "lua": return "lua";
+    case "r": return "r";
+    case "dart": return "dart";
+    case "bat": case "cmd": return "batch";
+    case "ps1": return "powershell";
+    case "vue": return "xml";
+    default: return null;
+  }
 };
