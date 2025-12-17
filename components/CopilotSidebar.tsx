@@ -548,7 +548,6 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     }
     
     setInput("");
-    setSelectedContextFiles([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
     // When sending, force snap to bottom and re-enable auto-tracking

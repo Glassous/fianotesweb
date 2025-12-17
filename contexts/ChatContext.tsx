@@ -153,6 +153,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fileContextRef = useRef<RawNoteFile[]>([]);
+  const selectedContextRef = useRef<RawNoteFile[]>([]);
 
   const setFileContext = useCallback((files: RawNoteFile[]) => {
     fileContextRef.current = files;
@@ -160,14 +161,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const executeTool = async (name: string, args: any): Promise<string> => {
     if (name === "list_files") {
-      const files = fileContextRef.current;
-      // Filter out non-markdown/text files if needed, or just send paths
+      const files = selectedContextRef.current.length > 0 ? selectedContextRef.current : fileContextRef.current;
       const paths = files.map(f => f.filePath);
       return JSON.stringify(paths);
     }
     if (name === "read_file") {
       const filePath = args.file_path;
-      const file = fileContextRef.current.find(f => f.filePath === filePath);
+      const file = (selectedContextRef.current.length > 0 ? selectedContextRef.current : fileContextRef.current)
+        .find(f => f.filePath === filePath);
       if (file) {
         let content = file.content;
         
@@ -325,6 +326,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     let userContent = content;
     if (contextFiles.length > 0) {
+      selectedContextRef.current = contextFiles;
       const contextStr = contextFiles
         .map(f => `\n\n<document name="${f.filePath}">\n${f.content || "(No Content)"}\n</document>`)
         .join("");
@@ -380,12 +382,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadSession = useCallback((session: ChatSession) => {
     setCurrentSessionId(session.id);
     setMessages(session.messages);
+    selectedContextRef.current = [];
   }, []);
 
   const clearCurrentSession = useCallback(() => {
     setCurrentSessionId(null);
     setMessages([]);
     localStorage.removeItem(STORAGE_KEYS.CURRENT_SESSION_ID);
+    selectedContextRef.current = [];
   }, []);
 
   const deleteSession = useCallback((sessionId: string) => {
