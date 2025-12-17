@@ -31,6 +31,7 @@ import {
   SiDart,
   SiGnubash,
   SiYaml,
+  SiVuedotjs,
 } from "react-icons/si";
 
 interface IconProps {
@@ -73,6 +74,8 @@ export const getFileIcon = (fileName: string, className?: string) => {
       return <VscJson className={`${cls} text-yellow-600`} />;
     case "xml":
       return <VscCode className={`${cls} text-orange-400`} />;
+    case "vue":
+      return <SiVuedotjs className={`${cls} text-green-500`} />;
     
     // Markdown
     case "md":

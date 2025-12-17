@@ -13,6 +13,7 @@ import { CopilotSidebar } from "./components/CopilotSidebar";
 import { MarkdownRenderer } from "./components/MarkdownRenderer";
 import { CodeViewer } from "./components/CodeViewer";
 import { JSXRenderer } from "./components/JSXRenderer";
+import { VueRenderer } from "./components/VueRenderer";
 import { LoadingAnimation } from "./components/LoadingAnimation";
 import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
@@ -255,6 +256,7 @@ const getLanguageFromExtension = (filePath: string): string | null => {
     case "dart": return "dart";
     case "bat": case "cmd": return "batch";
     case "ps1": return "powershell";
+    case "vue": return "xml";
     default: return null;
   }
 };
@@ -1022,8 +1024,8 @@ const MainLayout: React.FC = () => {
            </div>
 
           <div className="flex items-center gap-2 shrink-0 mb-1.5">
-            {/* HTML/JSX Preview Toggle */}
-            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx")) && (
+            {/* HTML/JSX/Vue Preview Toggle */}
+            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue")) && (
               <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
                 <button
                   onClick={() => setViewMode("preview")}
@@ -1064,8 +1066,8 @@ const MainLayout: React.FC = () => {
 
             {/* Desktop Toolbar */}
             <div className="hidden md:flex items-center gap-1">
-              {/* Refresh Button for HTML/JSX Preview */}
-              {(currentNote?.filePath.endsWith(".html") || currentNote?.filePath.endsWith(".jsx")) && viewMode === "preview" && (
+              {/* Refresh Button for HTML/JSX/Vue Preview */}
+              {(currentNote?.filePath.endsWith(".html") || currentNote?.filePath.endsWith(".jsx") || currentNote?.filePath.endsWith(".vue")) && viewMode === "preview" && (
                 <button
                   onClick={handleRefreshHtmlPreview}
                   className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
@@ -1327,7 +1329,7 @@ const MainLayout: React.FC = () => {
                         className={`w-full h-full absolute inset-0 bg-gray-50 dark:bg-zinc-950 flex flex-col ${isActive ? 'z-10' : 'z-0 invisible'}`}
                     >
                         {note?.content ? (
-                            <div className="w-full h-full flex flex-col">
+                            <div className="w-full h-full flex flex-col overflow-y-auto">
                             <div className="mx-auto w-full flex-1 flex flex-col">
                                 {note.filePath.endsWith(".html") && viewMode === "preview" ? (
                                 <iframe
@@ -1343,10 +1345,18 @@ const MainLayout: React.FC = () => {
                                         isDark={isDarkMode}
                                     />
                                 </div>
-                                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
+                                ) : note.filePath.endsWith(".vue") && viewMode === "preview" ? (
+                                <div className="w-full flex-1 min-h-0">
+                                    <VueRenderer
+                                        key={`${note.filePath}-${refreshKey}`}
+                                        code={note.content}
+                                        isDark={isDarkMode}
+                                    />
+                                </div>
+                                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
                                 <CodeViewer 
                                     content={note.content} 
-                                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : getLanguageFromExtension(note.filePath)!} 
+                                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : note.filePath.endsWith(".vue") ? "xml" : getLanguageFromExtension(note.filePath)!} 
                                     isDark={isDarkMode}
                                 />
                                 ) : (
@@ -1359,7 +1369,7 @@ const MainLayout: React.FC = () => {
                                 )}
                             </div>
 
-                            {(!getLanguageFromExtension(note.filePath) || note.filePath.endsWith(".html") || note.filePath.endsWith(".jsx")) && (!note.filePath.endsWith(".html") && !note.filePath.endsWith(".jsx") || viewMode === "source") && (
+                            {(!getLanguageFromExtension(note.filePath) || note.filePath.endsWith(".html") || note.filePath.endsWith(".jsx") || note.filePath.endsWith(".vue")) && (!note.filePath.endsWith(".html") && !note.filePath.endsWith(".jsx") && !note.filePath.endsWith(".vue") || viewMode === "source") && (
                                 <div className="p-8 max-w-4xl mx-auto border-t border-zinc-200 dark:border-zinc-800 mt-8 mb-12 transition-colors">
                                 <div className="flex flex-wrap gap-2">
                                     {note.metadata?.tags?.map((tag: string) => (
