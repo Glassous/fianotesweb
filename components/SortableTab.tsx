@@ -31,7 +31,7 @@ interface SortableTabProps {
   nextIsActive?: boolean;
 }
 
-export const SortableTab = ({
+export const SortableTab = React.memo(({
   id,
   path,
   isActive,
@@ -50,7 +50,7 @@ export const SortableTab = ({
   } = useSortable({ id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     zIndex: isDragging ? 50 : (isActive ? 10 : 'auto'),
     opacity: isDragging ? 0.5 : 1,
@@ -96,4 +96,4 @@ export const SortableTab = ({
       </button>
     </div>
   );
-};
+});

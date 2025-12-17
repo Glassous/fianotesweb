@@ -18,7 +18,7 @@ interface FileTabContentProps {
   onAskCopilot: (text: string) => void;
 }
 
-export const FileTabContent: React.FC<FileTabContentProps> = ({
+export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
   filePath,
   isActive,
   note,
@@ -119,4 +119,4 @@ export const FileTabContent: React.FC<FileTabContentProps> = ({
         )}
     </div>
   );
-};
+});
