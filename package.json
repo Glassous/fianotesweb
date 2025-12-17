@@ -17,6 +17,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "github-markdown-css": "^5.8.1",
     "glob": "^10.3.10",
+    "graphviz-react": "^1.2.5",
     "gray-matter": "^4.0.3",
     "i18next": "^25.7.3",
     "i18next-browser-languagedetector": "^8.2.0",

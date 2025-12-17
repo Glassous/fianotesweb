@@ -8,6 +8,8 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "github-markdown-css/github-markdown-light.css";
 import mermaid from "mermaid";
+// @ts-ignore
+import { Graphviz } from 'graphviz-react';
 
 interface MarkdownRendererProps {
   content: string;
@@ -82,6 +84,22 @@ const ChevronDownIcon = ({ collapsed }: { collapsed: boolean }) => (
   </svg>
 );
 
+const DownloadIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+    />
+  </svg>
+);
+
 // --- Mermaid Block Component (Optimized) ---
 // 使用 React.memo 避免不必要的重渲染
 const MermaidBlock = React.memo(({ chart, isDark }: { chart: string; isDark: boolean }) => {
@@ -126,6 +144,92 @@ const MermaidBlock = React.memo(({ chart, isDark }: { chart: string; isDark: boo
   // 自定义比较函数：只有代码或主题变化时才重渲染
   return prev.chart === next.chart && prev.isDark === next.isDark;
 });
+
+// --- Graphviz Block Component ---
+const GraphvizBlock = React.memo(({ chart, isDark }: { chart: string; isDark: boolean }) => {
+  const { t } = useTranslation();
+  const [showSource, setShowSource] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleExportSvg = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const svgElement = container.querySelector('svg');
+    if (!svgElement) return;
+
+    // Get the SVG data
+    const serializer = new XMLSerializer();
+    let source = serializer.serializeToString(svgElement);
+
+    // Add XML declaration if not present
+    if (!source.match(/^<\?xml/)) {
+      source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+    }
+
+    // Convert to blob and download
+    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `graphviz-${Date.now()}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Graphviz renders usually with black lines, so we force a white background for the diagram itself
+  // to ensure visibility in dark mode, unless we want to parse/modify the DOT.
+  // Using a simple white container for the graph is the most robust solution.
+
+  return (
+    <div className="my-6 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0d1117] overflow-hidden shadow-sm">
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-100 dark:bg-[#161b22] border-b border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+            Graphviz
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {!showSource && (
+            <button
+              onClick={handleExportSvg}
+              className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors px-2 py-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800"
+              title={t('app.exportSvg') || "Export SVG"}
+            >
+              <DownloadIcon />
+              <span className="hidden sm:inline">SVG</span>
+            </button>
+          )}
+          <button
+            onClick={() => setShowSource(!showSource)}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors px-2 py-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {showSource ? t('app.preview') : t('app.source')}
+          </button>
+        </div>
+      </div>
+
+      <div className={`p-4 overflow-x-auto ${!showSource ? "flex justify-center bg-white" : ""}`}>
+        {showSource ? (
+          <pre className="text-sm font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap m-0">
+            {chart}
+          </pre>
+        ) : (
+          <div className="graphviz-wrapper" ref={containerRef}>
+             {/* @ts-ignore */}
+            <Graphviz
+              dot={chart}
+              options={{ height: "100%", width: "100%", zoom: false, fit: true }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}, (prev, next) => prev.chart === next.chart && prev.isDark === next.isDark);
 
 // --- Custom Pre Block Component ---
 const PreBlock = ({ children, isDark }: { children: React.ReactNode; isDark: boolean }) => {
@@ -342,6 +446,15 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           <MermaidBlock 
             chart={String(children).replace(/\n$/, "")} 
             isDark={isDark} 
+          />
+        );
+      }
+
+      if (match && (match[1] === "graphviz" || match[1] === "dot")) {
+        return (
+          <GraphvizBlock
+            chart={String(children).replace(/\n$/, "")}
+            isDark={isDark}
           />
         );
       }
