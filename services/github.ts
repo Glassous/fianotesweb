@@ -18,7 +18,24 @@ export interface GitHubTreeItem {
 }
 
 export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
-  if (!REPO_PATH) throw new Error(i18n.t("errors.github.repoNotConfigured"));
+  if (!REPO_PATH) {
+    return [
+      {
+        path: "Guide.md",
+        mode: "100644",
+        type: "blob",
+        sha: "local-readme",
+        url: "/README.md",
+      },
+      {
+        path: "指南.md",
+        mode: "100644",
+        type: "blob",
+        sha: "local-readme-cn",
+        url: "/README_zh-CN.md",
+      },
+    ];
+  }
   
   const headers: HeadersInit = {
     Accept: "application/vnd.github+json",
@@ -67,6 +84,12 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
 };
 
 export const fetchNoteContent = async (url: string): Promise<string> => {
+  if (url.startsWith("/")) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch local content");
+    return await res.text();
+  }
+
     const headers: HeadersInit = {
     Accept: "application/vnd.github.raw", // Request raw content
   };

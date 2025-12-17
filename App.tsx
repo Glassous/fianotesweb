@@ -17,9 +17,8 @@ import { VueRenderer } from "./components/VueRenderer";
 import { LoadingAnimation } from "./components/LoadingAnimation";
 import { buildFileTree, extractHeadings } from "./utils/transform";
 import { parseFrontmatter } from "./utils/frontmatter";
-import { MOCK_NOTES } from "./constants";
 import { RawNoteFile, NoteItem, OutlineItem } from "./types";
-import { fetchNotesTree, fetchNoteContent, isGitHubConfigured } from "./services/github";
+import { fetchNotesTree, fetchNoteContent } from "./services/github";
 
 import { getFileIcon } from "./components/FileIcons";
 
@@ -455,26 +454,22 @@ const MainLayout: React.FC = () => {
 
   // Initial Load
   const loadNotes = async () => {
-    if (isGitHubConfigured()) {
-      setIsLoading(true);
-      try {
-        const tree = await fetchNotesTree();
-        const rawFiles: RawNoteFile[] = tree.map((item) => ({
-          filePath: item.path,
-          sha: item.sha,
-          blobUrl: item.url,
-          content: undefined,
-          metadata: undefined,
-        }));
-        setNotesData(rawFiles);
-      } catch (err: any) {
-        console.error("Failed to fetch notes tree:", err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      setNotesData(MOCK_NOTES);
+    setIsLoading(true);
+    try {
+      const tree = await fetchNotesTree();
+      const rawFiles: RawNoteFile[] = tree.map((item) => ({
+        filePath: item.path,
+        sha: item.sha,
+        blobUrl: item.url,
+        content: undefined,
+        metadata: undefined,
+      }));
+      setNotesData(rawFiles);
+    } catch (err: any) {
+      console.error("Failed to fetch notes tree:", err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
