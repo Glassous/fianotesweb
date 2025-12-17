@@ -1419,11 +1419,13 @@ const MainLayout: React.FC = () => {
                 return (
                     <div 
                         key={filePath}
-                        id={`scroll-container-${filePath}`}
                         className={`w-full h-full absolute inset-0 bg-gray-50 dark:bg-zinc-950 flex flex-col ${isActive ? 'z-10' : 'z-0 invisible'}`}
                     >
                         {note?.content ? (
-                            <div className="w-full h-full flex flex-col overflow-y-auto">
+                            <div 
+                                id={`scroll-container-${filePath}`}
+                                className="w-full h-full flex flex-col overflow-y-auto"
+                            >
                             <div className="mx-auto w-full flex-1 flex flex-col">
                                 {note.filePath.endsWith(".html") && viewMode === "preview" ? (
                                 <iframe
