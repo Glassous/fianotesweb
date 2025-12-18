@@ -842,8 +842,8 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
 
         {/* Content Area */}
         <div className="flex-1 overflow-hidden relative flex flex-col min-h-0">
-            {showHistory ? (
-                // History List
+            {/* History List */}
+            <div className={`absolute inset-0 z-40 flex flex-col bg-white dark:bg-zinc-900 transition-transform duration-300 ease-in-out ${showHistory ? 'translate-x-0 shadow-xl' : 'translate-x-full'}`}>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
                     {sessions.length === 0 ? (
                         <div className="text-center text-zinc-400 mt-10 text-sm">{t('copilot.noHistory')}</div>
@@ -871,10 +871,11 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                         ))
                     )}
                 </div>
-            ) : (
-                // Chat Area
-                <>
-                     {/* Messages */}
+            </div>
+
+            {/* Chat Area */}
+            <div className={`absolute inset-0 z-0 flex flex-col bg-white dark:bg-zinc-900 transition-all duration-300 ease-in-out ${showHistory ? '-translate-x-[20%] opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'}`}>
+                    {/* Messages */}
                     <div 
                         ref={messagesContainerRef}
                         onScroll={handleScroll}
@@ -1095,8 +1096,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                             </button>
                         </div>
                     </div>
-                </>
-            )}
+            </div>
 
             {/* Delete Confirmation Overlay */}
             {deleteConfirmation.isOpen && (
