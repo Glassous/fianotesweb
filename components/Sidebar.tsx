@@ -137,7 +137,9 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         ) : (
           getFileIcon(node.name, "mr-2")
         )}
-        <span className="truncate">{node.name}</span>
+        <span className="truncate">
+          {node.type === "file" ? node.name.replace(/\.[^/.]+$/, "") : node.name}
+        </span>
       </div>
 
       {node.type === "folder" &&
@@ -275,7 +277,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   >
                     {getFileIcon(file.name, "mr-2")}
                     <div className="flex flex-col min-w-0">
-                      <span className="truncate">{file.name}</span>
+                      <span className="truncate">{file.name.replace(/\.[^/.]+$/, "")}</span>
                       <span className="text-[10px] text-zinc-400 truncate">
                         {file.path}
                       </span>

@@ -56,7 +56,7 @@ export const SortableTab = React.memo(({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const fileName = path.split('/').pop()?.replace(/\.md$/, "");
+  const fileName = path.split('/').pop()?.replace(/\.[^/.]+$/, "");
 
   return (
     <div

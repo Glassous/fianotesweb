@@ -579,7 +579,7 @@ const MainLayout: React.FC = () => {
       setRecentFiles((prev) => {
         const newItem: RecentFile = {
           filePath: currentNote.filePath,
-          title: currentNote.metadata?.title || currentNote.filePath.split("/").pop()?.replace(/\.md$/, "") || t('app.untitled'),
+          title: currentNote.metadata?.title || currentNote.filePath.split("/").pop() || t('app.untitled'),
           timestamp: Date.now(),
         };
         // Remove existing entry for same file to avoid duplicates
@@ -1010,7 +1010,7 @@ const MainLayout: React.FC = () => {
                         <span className="truncate flex-1 text-left flex items-center gap-2">
                             {currentNote && getFileIcon(currentNote.filePath, "w-4 h-4")}
                             {currentNote 
-                              ? (currentNote.metadata?.title || currentNote.filePath.split('/').pop()?.replace(/\.md$/, "")) 
+                              ? (currentNote.metadata?.title || currentNote.filePath.split('/').pop()?.replace(/\.[^/.]+$/, "")) 
                               : (openFiles.length > 0 ? t('app.selectFile', 'Select File') : t('app.title'))}
                         </span>
                         <ChevronDownIcon className="w-4 h-4 text-zinc-500 ml-2" />
@@ -1029,7 +1029,7 @@ const MainLayout: React.FC = () => {
                                      >
                                         <div className="flex items-center gap-2 truncate">
                                             {getFileIcon(path, "w-4 h-4 shrink-0")}
-                                            <span className="truncate text-sm">{path.split('/').pop()?.replace(/\.md$/, "")}</span>
+                                            <span className="truncate text-sm">{path.split('/').pop()?.replace(/\.[^/.]+$/, "")}</span>
                                         </div>
                                          <button 
                                              onClick={(e) => handleCloseTab(e, path)}
@@ -1118,7 +1118,7 @@ const MainLayout: React.FC = () => {
                                                        >
                                                             <div className="flex items-center gap-2 truncate">
                                                                 {getFileIcon(path, "w-4 h-4 shrink-0")}
-                                                                <span className="truncate text-sm">{path.split('/').pop()?.replace(/\.md$/, "")}</span>
+                                                                <span className="truncate text-sm">{path.split('/').pop()?.replace(/\.[^/.]+$/, "")}</span>
                                                             </div>
                                                             <button 
                                                                 onClick={(e) => handleCloseTab(e, path)}
@@ -1411,10 +1411,8 @@ const MainLayout: React.FC = () => {
                                 className="absolute inset-0 z-0"
                                 aria-label={t('app.open')}
                             />
-                          <div className="relative z-10 p-1.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 group-hover:text-blue-500 transition-colors pointer-events-none">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
+                          <div className="relative z-10 p-1.5 rounded bg-zinc-100 dark:bg-zinc-800 transition-colors pointer-events-none">
+                            {getFileIcon(file.filePath, "w-6 h-6")}
                           </div>
                           <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
                             <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">{file.title}</div>
