@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
-  HashRouter,
+  MemoryRouter,
   Routes,
   Route,
   useNavigate,
@@ -18,6 +18,7 @@ import { PDFViewer } from "./components/PDFViewer";
 import { LoadingAnimation } from "./components/LoadingAnimation";
 import { FileTabContent } from "./components/FileTabContent";
 import { SortableTab } from "./components/SortableTab";
+import { Toast } from "./components/Toast";
 import {
   DndContext,
   closestCenter,
@@ -148,6 +149,22 @@ const DownloadIcon = () => (
   </svg>
 );
 
+const ShareIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+    />
+  </svg>
+);
+
 const MoreVerticalIcon = () => (
   <svg
     className="w-5 h-5"
@@ -274,6 +291,9 @@ const MainLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
+  // --- Toast State ---
+  const [toast, setToast] = useState<{ message: string; url?: string } | null>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
@@ -307,6 +327,20 @@ const MainLayout: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleShare = () => {
+    if (!currentNote) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}#/note/${currentNote.filePath}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+        setToast({
+            message: t('app.linkCopied', { defaultValue: 'Link copied to clipboard!' }),
+            url: shareUrl
+        });
+    }).catch(err => {
+        console.error('Failed to copy link: ', err);
+    });
     setIsMobileMenuOpen(false);
   };
 
@@ -560,9 +594,16 @@ const MainLayout: React.FC = () => {
     }
   }, [activeFilePath]);
 
-  // Effect: On Mount, if there is a path, clear it.
+  // Effect: On Mount, check for Hash (Share Link) and navigate internally, then clear hash.
   useEffect(() => {
-    if (location.pathname !== "/") {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith("#/note/")) {
+      const path = hash.substring(1); // remove '#'
+      navigate(path, { replace: true });
+      // Clear the hash from the browser URL without reloading
+      window.history.replaceState(null, "", window.location.pathname);
+    } else if (location.pathname !== "/") {
+      // Existing logic: Clear path on refresh if not a share link
       setOpenFiles([]);
       navigate("/", { replace: true });
     }
@@ -1196,13 +1237,22 @@ const MainLayout: React.FC = () => {
 
               {/* Download Button */}
               {currentNote && (
-                <button
-                  onClick={handleDownload}
-                  className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
-                  title={t('app.download')}
-                >
-                  <DownloadIcon />
-                </button>
+                <>
+                  <button
+                    onClick={handleShare}
+                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                    title={t('app.share', { defaultValue: 'Share' })}
+                  >
+                    <ShareIcon />
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
+                    title={t('app.download')}
+                  >
+                    <DownloadIcon />
+                  </button>
+                </>
               )}
 
               {/* Language Switcher */}
@@ -1293,15 +1343,24 @@ const MainLayout: React.FC = () => {
 
                     {isMobileMenuOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50">
-                             {/* Download */}
+                             {/* Share & Download */}
                              {currentNote && (
-                                <button
-                                    onClick={handleDownload}
-                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
-                                >
-                                    <DownloadIcon />
-                                    <span>{t('app.download')}</span>
-                                </button>
+                                <>
+                                  <button
+                                      onClick={handleShare}
+                                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                                  >
+                                      <ShareIcon />
+                                      <span>{t('app.share', { defaultValue: 'Share' })}</span>
+                                  </button>
+                                  <button
+                                      onClick={handleDownload}
+                                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                                  >
+                                      <DownloadIcon />
+                                      <span>{t('app.download')}</span>
+                                  </button>
+                                </>
                              )}
                              
                              {/* Language */}
@@ -1479,17 +1538,26 @@ const MainLayout: React.FC = () => {
         />
         </div>
       </div>
+      
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          url={toast.url}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
 
 const App: React.FC = () => {
   return (
-    <HashRouter>
+    <MemoryRouter>
       <Routes>
         <Route path="*" element={<MainLayout />} />
       </Routes>
-    </HashRouter>
+    </MemoryRouter>
   );
 };
 
