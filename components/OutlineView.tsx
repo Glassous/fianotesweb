@@ -63,7 +63,7 @@ const OutlineNode: React.FC<OutlineNodeProps> = ({ item, onHeadingClick, activeH
         >
           {hasChildren && <ChevronIcon open={isOpen} />}
         </div>
-        <span className="truncate">{item.text}</span>
+        <span className="truncate">{item.text.replace(/\*\*(.*?)\*\*/g, "$1")}</span>
       </div>
       {hasChildren && isOpen && (
         <div>

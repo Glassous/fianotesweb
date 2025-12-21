@@ -10,6 +10,7 @@ import "github-markdown-css/github-markdown-light.css";
 import mermaid from "mermaid";
 // @ts-ignore
 import { Graphviz } from 'graphviz-react';
+import { MapCard } from "./MapCard";
 
 interface MarkdownRendererProps {
   content: string;
@@ -496,6 +497,46 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         <a target="_blank" rel="noopener noreferrer" {...props} />
       );
     },
+    img: ({ node, ...props }: any) => {
+      const src = props.src || "";
+      // Intercept our special internal map URL
+      if (src.startsWith("https://fianotes-map-internal/view")) {
+        try {
+          // Use path based parsing which is more robust against URL encoding
+          // Expected format: https://fianotes-map-internal/view/LAT/LNG
+          const parts = src.split('/');
+          if (parts.length >= 6) {
+             const latStr = parts[4];
+             const lngStr = parts[5];
+             const lat = parseFloat(latStr);
+             const lng = parseFloat(lngStr);
+             
+             if (!isNaN(lat) && !isNaN(lng)) {
+               return <MapCard lat={lat} lng={lng} rawText={`[map:${lat},${lng}]`} />;
+             }
+          }
+          
+          // Fallback to query param parsing if path parsing failed (for backward compatibility during dev)
+          const url = new URL(src);
+          const lat = parseFloat(url.searchParams.get("lat") || "");
+          const lng = parseFloat(url.searchParams.get("lng") || "");
+          
+          if (!isNaN(lat) && !isNaN(lng)) {
+            return <MapCard lat={lat} lng={lng} rawText={`[map:${lat},${lng}]`} />;
+          }
+        } catch (e) {
+          console.error("Failed to parse map URL", e);
+        }
+        
+        // Return null or a placeholder div to prevent browser from trying to fetch the broken URL
+        return (
+            <div className="p-2 border border-red-200 rounded bg-red-50 text-red-500 text-xs font-mono">
+                Map Error: Invalid coordinates
+            </div>
+        );
+      }
+      return <img {...props} />;
+    },
   }), [isDark, onInternalLinkClick]); // 只有当 isDark 或 点击回调 变化时才更新
 
   // Split content by <think> tags
@@ -592,6 +633,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         
         if (!part) return null;
 
+        // Transform [map:lat,lng] to internal image syntax
+        const processedPart = part.replace(
+            /\[map:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g, 
+            (match, lat, lng) => `![map-view](https://fianotes-map-internal/view?lat=${lat}&lng=${lng})`
+        );
+
         return (
           <ReactMarkdown
             key={index}
@@ -600,7 +647,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             // 传入 memoized 的 components
             components={markdownComponents}
           >
-            {part}
+            {processedPart}
           </ReactMarkdown>
         );
       })}
