@@ -549,6 +549,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           background-color: transparent !important;
           font-family: inherit;
           min-height: auto !important;
+          cursor: default;
+          caret-color: transparent;
         }
         
         .markdown-body pre {
