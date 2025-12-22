@@ -884,14 +884,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                         Password has been changed. Please re-enter.
                     </div>
                  )}
-                 <form onSubmit={handlePasswordSubmit} className="w-full max-w-xs relative">
-                     <button 
-                        type="button"
-                        onClick={onClose}
-                        className="absolute -top-12 right-0 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 md:hidden"
-                     >
-                        <CloseIcon className="w-5 h-5" />
-                     </button>
+                 <form onSubmit={handlePasswordSubmit} className="w-full max-w-xs">
                      <input
                          type="password"
                          value={passwordInput}
