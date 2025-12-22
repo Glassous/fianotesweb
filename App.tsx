@@ -1341,8 +1341,7 @@ const MainLayout: React.FC = () => {
                         <MoreVerticalIcon />
                     </button>
 
-                    {isMobileMenuOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50">
+                        <div className={`absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50 transform transition-all duration-200 ease-out origin-top-right ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 visible" : "opacity-0 scale-95 -translate-y-2 invisible pointer-events-none"}`}>
                              {/* Share & Download */}
                              {currentNote && (
                                 <>
@@ -1402,7 +1401,6 @@ const MainLayout: React.FC = () => {
                                 <span>{t('app.github')}</span>
                              </button>
                         </div>
-                    )}
                 </div>
             </div>
           </div>
