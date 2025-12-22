@@ -584,6 +584,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     scrollToBottom();
 
     await sendMessage(content, files);
+    setSelectedContextFiles([]); // Clear context after sending
   };
 
   const handleCopy = (text: string) => {
