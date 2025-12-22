@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
 import { streamChatCompletion, ChatMessage, StreamUpdate, ToolCall, ContentPart, getTextContent } from "../services/openai";
 import { RawNoteFile } from "../types";
-import { fetchNoteContent } from "../services/github";
+import { fetchNoteContent, checkPasswordProtection, verifyPassword } from "../services/github";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 
 const STORAGE_KEYS = {
   SESSIONS: "chat_sessions",
   CURRENT_SESSION_ID: "chat_current_session_id",
+  AI_PASSWORD: "ai_password",
 };
 
 export interface ChatSession {
@@ -22,12 +23,15 @@ interface ChatContextType {
   currentSessionId: string | null;
   messages: ChatMessage[];
   isLoading: boolean;
+  isAiLocked: boolean;
+  isPasswordChanged: boolean;
   sendMessage: (content: string, contextFiles: RawNoteFile[]) => Promise<void>;
   loadSession: (session: ChatSession) => void;
   clearCurrentSession: () => void;
   deleteSession: (sessionId: string) => void;
   regenerateLastResponse: () => Promise<void>;
   setFileContext: (files: RawNoteFile[]) => void;
+  verifyAiAccess: (password: string) => Promise<boolean>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -64,6 +68,41 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hasPasswordFile, setHasPasswordFile] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [isPasswordChanged, setIsPasswordChanged] = useState(false);
+  
+  useEffect(() => {
+    checkPasswordProtection().then(async (exists) => {
+        setHasPasswordFile(exists);
+        if (exists) {
+            const savedPassword = localStorage.getItem(STORAGE_KEYS.AI_PASSWORD);
+            if (savedPassword) {
+                // Verify immediately
+                const isValid = await verifyPassword(savedPassword);
+                if (isValid) {
+                    setIsVerified(true);
+                } else {
+                    setIsVerified(false);
+                    setIsPasswordChanged(true);
+                    localStorage.removeItem(STORAGE_KEYS.AI_PASSWORD);
+                }
+            }
+        }
+    });
+  }, []);
+
+  const verifyAiAccess = useCallback(async (password: string) => {
+    const isValid = await verifyPassword(password);
+    if (isValid) {
+        setIsVerified(true);
+        setIsPasswordChanged(false);
+        localStorage.setItem(STORAGE_KEYS.AI_PASSWORD, password);
+    }
+    return isValid;
+  }, []);
+
+  const isAiLocked = hasPasswordFile && !isVerified;
   
   // Ref to track current session ID inside callbacks (streaming)
   const currentSessionIdRef = useRef<string | null>(null);
@@ -452,12 +491,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentSessionId,
         messages,
         isLoading,
+        isAiLocked,
+        isPasswordChanged,
         sendMessage,
         loadSession,
         clearCurrentSession,
         deleteSession,
         regenerateLastResponse,
         setFileContext,
+        verifyAiAccess,
       }}
     >
       {children}

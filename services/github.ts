@@ -138,3 +138,53 @@ export const fetchBlobContentAsBase64 = async (url: string): Promise<string> => 
         reader.readAsDataURL(blob);
     });
 };
+
+export const checkPasswordProtection = async (): Promise<boolean> => {
+  if (!REPO_PATH) return false;
+  
+  const checkFile = async (path: string) => {
+      try {
+        const url = `https://api.github.com/repos/${REPO_PATH}/contents/${path}`;
+        const headers: HeadersInit = { Accept: "application/vnd.github+json" };
+        if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
+        const res = await fetch(url, { method: "HEAD", headers });
+        return res.ok;
+      } catch (e) {
+        return false;
+      }
+  };
+
+  if (await checkFile('password.fianotes')) return true;
+  if (await checkFile('public/password.fianotes')) return true;
+  
+  return false;
+};
+
+export const verifyPassword = async (inputPassword: string): Promise<boolean> => {
+  if (!REPO_PATH) return true;
+  
+  const getPasswordContent = async (path: string): Promise<string | null> => {
+      try {
+        const url = `https://api.github.com/repos/${REPO_PATH}/contents/${path}`;
+        const headers: HeadersInit = { Accept: "application/vnd.github.raw" };
+        if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
+        
+        const res = await fetch(url, { headers });
+        if (!res.ok) return null;
+        return await res.text();
+      } catch (e) {
+        return null;
+      }
+  };
+
+  let truePassword = await getPasswordContent('password.fianotes');
+  if (truePassword === null) {
+      truePassword = await getPasswordContent('public/password.fianotes');
+  }
+
+  if (truePassword === null) return false; // No password file found implies no lock, but here we assume lock is active if checkPasswordProtection returned true. 
+  // Wait, if checkPasswordProtection returns true, one of them must exist. 
+  // But strictly speaking, if verify is called, we expect a password.
+  
+  return truePassword.trim() === inputPassword.trim();
+};

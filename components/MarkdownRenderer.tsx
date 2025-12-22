@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useChatContext } from "../contexts/ChatContext";
 import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -403,7 +404,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     };
   }, [selectionMenu]);
 
+  const { isAiLocked } = useChatContext();
+
   const handleMouseUp = () => {
+      if (isAiLocked) return;
       if (!onSelectionAction || variant !== "document") return;
       
       const selection = window.getSelection();

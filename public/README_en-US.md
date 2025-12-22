@@ -42,6 +42,22 @@ The application is configured using environment variables. You can set these in 
 
 *Note: If `VITE_OPENAI_BASE_URL` or `VITE_OPENAI_MODEL` are not provided, they will default to OpenAI's official API and `gpt-5` respectively.*
 
+## AI Lock (Password Protection)
+
+You can password-protect the AI features of your notebook. This is useful if you want to share your notes publicly but restrict AI usage (which consumes your API quota) to yourself.
+
+1.  Create a file named `password.fianotes` in the root of your GitHub notes repository **OR** in the `public/` folder of your repository.
+2.  Write your password in this file (plain text).
+3.  Commit the file.
+
+When this file exists in either location, the AI sidebar will require a password to function. If the file does not exist, AI features are open to everyone.
+
+**Note on File Location:**
+- **Root Directory in GitHub Notes Repository**: Easiest to set up.
+- **`public/` Folder**: Useful if you want to keep your root directory in GitHub notes repository clean or if you are deploying the notes site itself and want to serve the password file statically.
+
+> **Priority**: If `password.fianotes` exists in both the GitHub repository root and the `public/` folder, the one in the GitHub repository root will take precedence.
+
 ## Local Development
 
 1. **Clone the repository**

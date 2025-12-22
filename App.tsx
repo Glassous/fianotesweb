@@ -38,6 +38,7 @@ import { buildFileTree, extractHeadings, getLanguageFromExtension } from "./util
 import { parseFrontmatter } from "./utils/frontmatter";
 import { RawNoteFile, NoteItem, OutlineItem } from "./types";
 import { fetchNotesTree, fetchNoteContent, fetchBlobContent } from "./services/github";
+import { useChatContext } from "./contexts/ChatContext";
 
 import { getFileIcon } from "./components/FileIcons";
 
@@ -275,9 +276,17 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const rawPath = params["*"];
 
+  const { isAiLocked } = useChatContext();
+
   // --- State ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  
+  // Ensure Copilot is closed on mount (fixes auto-open issue)
+  useEffect(() => {
+    setIsCopilotOpen(false);
+  }, []);
+
   const [isCopilotExpanded, setIsCopilotExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [hoverOpen, setHoverOpen] = useState(false); // For edge hover
@@ -376,7 +385,7 @@ const MainLayout: React.FC = () => {
         if (newWidth >= 200 && newWidth <= 600) {
           // Direct DOM update
           sidebarRef.current.style.width = `${newWidth}px`;
-          // Disable transition during drag to prevent lag
+          // Disable transition during drag to prevent lag (now handled via React prop if needed, but keeping here for sidebar which is not modified yet)
           sidebarRef.current.style.transition = 'none';
           currentSidebarWidthRef.current = newWidth;
         }
@@ -387,8 +396,6 @@ const MainLayout: React.FC = () => {
            // Direct DOM update
            copilotRef.current.style.width = `${newWidth}px`;
            copilotRef.current.style.marginRight = '0px'; // Ensure it stays docked
-           // Disable transition
-           copilotRef.current.style.transition = 'none';
            currentCopilotWidthRef.current = newWidth;
         }
       }
@@ -409,9 +416,7 @@ const MainLayout: React.FC = () => {
       if (isResizingCopilot.current) {
         isResizingCopilot.current = false;
         setCopilotWidth(currentCopilotWidthRef.current);
-        if (copilotRef.current) {
-            copilotRef.current.style.transition = ''; // Restore transition
-        }
+        // Transition restoration is handled by CopilotSidebar prop
       }
       document.body.style.cursor = "default";
       document.body.style.userSelect = "auto";
@@ -847,6 +852,7 @@ const MainLayout: React.FC = () => {
   };
 
   const handleAskCopilot = (text: string) => {
+    if (isAiLocked) return;
     setIsCopilotOpen(true);
     
     // Create a display title from the first few characters
@@ -1533,6 +1539,7 @@ const MainLayout: React.FC = () => {
           setContextFiles={setCopilotContextFiles}
           isExpanded={isCopilotExpanded}
           onToggleExpand={() => setIsCopilotExpanded(!isCopilotExpanded)}
+          isResizing={isResizing}
         />
         </div>
       </div>

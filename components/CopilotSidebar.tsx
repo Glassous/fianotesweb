@@ -112,9 +112,9 @@ const HistoryIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
+const CloseIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   <svg
-    className="w-6 h-6"
+    className={className}
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"
@@ -367,6 +367,7 @@ interface CopilotSidebarProps {
   setContextFiles: (files: RawNoteFile[]) => void;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  isResizing?: boolean;
 }
 
 export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
@@ -385,6 +386,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
   setContextFiles: setSelectedContextFiles,
   isExpanded = false,
   onToggleExpand,
+  isResizing = false,
 }) => {
   const { t } = useTranslation();
   const { 
@@ -397,8 +399,29 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     clearCurrentSession, 
     deleteSession: hookDeleteSession,
     regenerateLastResponse,
-    setFileContext
+    setFileContext,
+    isAiLocked,
+    isPasswordChanged,
+    verifyAiAccess
   } = useChatContext();
+
+  const [passwordInput, setPasswordInput] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsVerifying(true);
+      setVerifyError(null);
+      
+      const success = await verifyAiAccess(passwordInput);
+      if (!success) {
+          setVerifyError("Incorrect password");
+      } else {
+          setPasswordInput("");
+      }
+      setIsVerifying(false);
+  };
 
   // Update file context for tools
   useEffect(() => {
@@ -703,9 +726,10 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
     bottom: 0,
     width: isExpanded ? '100%' : width,
     transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-    transition: 'width 0.3s ease, transform 0.3s ease',
+    transition: isResizing ? 'none' : 'width 0.3s ease, transform 0.3s ease',
     zIndex: 40,
-    boxShadow: isOpen ? '-4px 0 16px rgba(0,0,0,0.05)' : 'none'
+    boxShadow: isOpen ? '-4px 0 16px rgba(0,0,0,0.05)' : 'none',
+    visibility: isOpen ? 'visible' as const : 'hidden' as const
   };
 
   const renderUserMessage = (content: string) => {
@@ -842,6 +866,51 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
         </div>
 
         {/* Content Area */}
+        {isAiLocked ? (
+             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+                 <div className="mb-4 text-zinc-400">
+                    <svg className="w-12 h-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                 </div>
+                 <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
+                     Password required
+                 </h3>
+                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+                     This repository has enabled AI lock. Please enter the password to continue.
+                 </p>
+                 {isPasswordChanged && (
+                    <div className="mb-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/30 rounded-lg text-xs text-yellow-700 dark:text-yellow-400">
+                        Password has been changed. Please re-enter.
+                    </div>
+                 )}
+                 <form onSubmit={handlePasswordSubmit} className="w-full max-w-xs relative">
+                     <button 
+                        type="button"
+                        onClick={onClose}
+                        className="absolute -top-12 right-0 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 md:hidden"
+                     >
+                        <CloseIcon className="w-5 h-5" />
+                     </button>
+                     <input
+                         type="password"
+                         value={passwordInput}
+                         onChange={e => setPasswordInput(e.target.value)}
+                         placeholder="Enter password"
+                         className="w-full px-4 py-2 mb-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         autoFocus
+                     />
+                     <button
+                         type="submit"
+                         disabled={isVerifying}
+                         className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                     >
+                         {isVerifying ? "Verifying..." : "Unlock"}
+                     </button>
+                     {verifyError && <p className="mt-3 text-xs text-red-500">{verifyError}</p>}
+                 </form>
+             </div>
+        ) : (
         <div className="flex-1 overflow-hidden relative flex flex-col min-h-0">
             {/* History List */}
             <div className={`absolute inset-0 z-40 flex flex-col bg-white dark:bg-zinc-900 transition-transform duration-300 ease-in-out ${showHistory ? 'translate-x-0 shadow-xl' : 'translate-x-full'}`}>
@@ -1128,6 +1197,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                 </div>
             )}
         </div>
+        )}
       </aside>
     </>
   );
