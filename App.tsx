@@ -344,7 +344,7 @@ const MainLayout: React.FC = () => {
     const shareUrl = `${window.location.origin}${window.location.pathname}#/note/${currentNote.filePath}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
         setToast({
-            message: t('app.linkCopied', { defaultValue: 'Link copied to clipboard!' }),
+            message: t('app.linkCopied'),
             url: shareUrl
         });
     }).catch(err => {
@@ -1247,7 +1247,7 @@ const MainLayout: React.FC = () => {
                   <button
                     onClick={handleShare}
                     className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
-                    title={t('app.share', { defaultValue: 'Share' })}
+                    title={t('app.share')}
                   >
                     <ShareIcon />
                   </button>
@@ -1356,7 +1356,7 @@ const MainLayout: React.FC = () => {
                                       className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
                                   >
                                       <ShareIcon />
-                                      <span>{t('app.share', { defaultValue: 'Share' })}</span>
+                                      <span>{t('app.share')}</span>
                                   </button>
                                   <button
                                       onClick={handleDownload}

@@ -23,6 +23,7 @@
     "clearRecent": "Clear All",
     "removeRecent": "Remove",
     "open": "Open",
+    "share": "Share",
     "download": "Download",
     "refresh": "Refresh",
     "github": "GitHub Repository",
@@ -31,7 +32,8 @@
     "selectedText": "Selected Text",
     "errorPrefix": "Error: ",
     "selectFile": "Select File",
-    "noOpenFiles": "No open files"
+    "noOpenFiles": "No open files",
+    "linkCopied": "Link copied to clipboard!"
   },
   "markdown": {
     "copy": "Copy",
