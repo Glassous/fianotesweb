@@ -298,6 +298,7 @@ const MainLayout: React.FC = () => {
 
   // --- Mobile Menu State ---
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileMenuLevel, setMobileMenuLevel] = useState<'main' | 'language'>('main');
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   // --- Toast State ---
@@ -1274,16 +1275,22 @@ const MainLayout: React.FC = () => {
                 {isLangMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50">
                     <button
+                      onClick={() => changeLanguage('en-US')}
+                      className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'en-US' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                    >
+                      English
+                    </button>
+                    <button
                       onClick={() => changeLanguage('zh-CN')}
                       className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-CN' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
                     >
                       简体中文
                     </button>
                     <button
-                      onClick={() => changeLanguage('en-US')}
-                      className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'en-US' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                      onClick={() => changeLanguage('zh-TW')}
+                      className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-TW' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
                     >
-                      English
+                      繁體中文
                     </button>
                   </div>
                 )}
@@ -1341,71 +1348,116 @@ const MainLayout: React.FC = () => {
                 {/* More Menu (Mobile) */}
                 <div className="relative" ref={mobileMenuRef}>
                     <button
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        onClick={() => {
+                          setIsMobileMenuOpen(!isMobileMenuOpen);
+                          setMobileMenuLevel('main');
+                        }}
                         className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none"
                     >
                         <MoreVerticalIcon />
                     </button>
 
-                        <div className={`absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50 transform transition-all duration-200 ease-out origin-top-right ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 visible" : "opacity-0 scale-95 -translate-y-2 invisible pointer-events-none"}`}>
-                             {/* Share & Download */}
-                             {currentNote && (
-                                <>
+                        <div className={`absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50 transform transition-all duration-200 ease-out origin-top-right overflow-hidden ${isMobileMenuOpen ? "opacity-100 scale-100 translate-y-0 visible" : "opacity-0 scale-95 -translate-y-2 invisible pointer-events-none"}`}>
+                            <div className="relative">
+                                {/* Main Menu */}
+                                <div className={`w-full transition-transform duration-300 ease-in-out ${mobileMenuLevel === 'main' ? 'translate-x-0' : '-translate-x-full absolute top-0'}`}>
+                                  {/* Share & Download */}
+                                  {currentNote && (
+                                      <>
+                                        <button
+                                            onClick={handleShare}
+                                            className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                                        >
+                                            <ShareIcon />
+                                            <span>{t('app.share')}</span>
+                                        </button>
+                                        <button
+                                            onClick={handleDownload}
+                                            className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                                        >
+                                            <DownloadIcon />
+                                            <span>{t('app.download')}</span>
+                                        </button>
+                                        <div className="border-t border-zinc-100 dark:border-zinc-700 my-1"></div>
+                                      </>
+                                  )}
+                                  
+                                  {/* Language Trigger */}
                                   <button
-                                      onClick={handleShare}
+                                      onClick={() => setMobileMenuLevel('language')}
+                                      className="flex w-full items-center justify-between px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                                  >
+                                      <div className="flex items-center gap-2">
+                                        <LanguageIcon />
+                                        <span>
+                                          {{'zh-CN': '简体中文', 'zh-TW': '繁體中文', 'en-US': 'English'}[i18n.language] || i18n.language}
+                                        </span>
+                                      </div>
+                                      <svg className="w-4 h-4 text-zinc-400 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                  </button>
+
+                                  {/* Theme */}
+                                  <button
+                                      onClick={() => cycleTheme()}
                                       className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
                                   >
-                                      <ShareIcon />
-                                      <span>{t('app.share')}</span>
+                                      {themeMode === "light" && <SunIcon />}
+                                      {themeMode === "dark" && <MoonIcon />}
+                                      {themeMode === "system" && <SystemIcon />}
+                                      <span>{t('app.theme.' + themeMode)}</span>
                                   </button>
+
+                                  {/* GitHub */}
+                                  <div className="border-t border-zinc-100 dark:border-zinc-700 my-1"></div>
                                   <button
-                                      onClick={handleDownload}
+                                      onClick={() => window.open("https://github.com/Glassous/fianotesweb", "_blank")}
                                       className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
                                   >
-                                      <DownloadIcon />
-                                      <span>{t('app.download')}</span>
+                                      <GithubIcon />
+                                      <span>{t('app.github')}</span>
                                   </button>
-                                </>
-                             )}
-                             
-                             {/* Language */}
-                             <div className="px-4 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1">
-                                {t('app.changeLanguage')}
-                             </div>
-                             <button
-                                onClick={() => changeLanguage('zh-CN')}
-                                className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-CN' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
-                             >
-                                简体中文
-                             </button>
-                             <button
-                                onClick={() => changeLanguage('en-US')}
-                                className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'en-US' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
-                             >
-                                English
-                             </button>
+                                </div>
 
-                             {/* Theme */}
-                             <div className="border-t border-zinc-100 dark:border-zinc-700 my-1"></div>
-                             <button
-                                onClick={() => cycleTheme()}
-                                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
-                             >
-                                {themeMode === "light" && <SunIcon />}
-                                {themeMode === "dark" && <MoonIcon />}
-                                {themeMode === "system" && <SystemIcon />}
-                                <span>{t('app.theme.' + themeMode)}</span>
-                             </button>
-
-                             {/* GitHub */}
-                             <div className="border-t border-zinc-100 dark:border-zinc-700 my-1"></div>
-                             <button
-                                onClick={() => window.open("https://github.com/Glassous/fianotesweb", "_blank")}
-                                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
-                             >
-                                <GithubIcon />
-                                <span>{t('app.github')}</span>
-                             </button>
+                                {/* Language Menu */}
+                                <div className={`w-full transition-transform duration-300 ease-in-out ${mobileMenuLevel === 'language' ? 'translate-x-0' : 'translate-x-full absolute top-0'}`}>
+                                  {/* Back Button */}
+                                  <button
+                                      onClick={() => setMobileMenuLevel('main')}
+                                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-700 border-b border-zinc-100 dark:border-zinc-700 mb-1"
+                                  >
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                      </svg>
+                                      <span>{t('common.back', {defaultValue: 'Back'})}</span>
+                                  </button>
+                                  
+                                  {/* Languages List */}
+                                  {[
+                                      { code: 'en-US', name: 'English' },
+                                      { code: 'zh-CN', name: '简体中文' },
+                                      { code: 'zh-TW', name: '繁體中文' }
+                                  ].map((lang) => (
+                                      <button
+                                          key={lang.code}
+                                          onClick={() => changeLanguage(lang.code)}
+                                          className={`flex w-full items-center justify-between px-4 py-2 text-sm ${
+                                              i18n.language === lang.code
+                                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' 
+                                              : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+                                          }`}
+                                      >
+                                          <span>{lang.name}</span>
+                                          {i18n.language === lang.code && (
+                                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                              </svg>
+                                          )}
+                                      </button>
+                                  ))}
+                                </div>
+                            </div>
                         </div>
                 </div>
             </div>

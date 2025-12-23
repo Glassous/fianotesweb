@@ -1,0 +1,100 @@
+{
+  "app": {
+    "title": "FiaNotes",
+    "loading": "載入中...",
+    "preview": "預覽",
+    "source": "原始碼",
+    "exportSvg": "匯出 SVG",
+    "words": "字",
+    "closeSidebar": "關閉側邊欄",
+    "openSidebar": "開啟側邊欄",
+    "closeFile": "關閉檔案",
+    "copilot": "Fia Copilot",
+    "theme": {
+      "light": "淺色模式",
+      "dark": "深色模式",
+      "system": "跟隨系統"
+    },
+    "welcomeTitle": "歡迎使用 FiaNotes",
+    "welcomeSubtitle": "選擇一個筆記開始閱讀。",
+    "askCopilot": "詢問 Fia Copilot",
+    "copilotHelp": "獲取 AI 輔助筆記功能",
+    "recentFiles": "最近開啟",
+    "clearRecent": "清空紀錄",
+    "removeRecent": "移除",
+    "open": "開啟",
+    "share": "分享",
+    "download": "下載",
+    "refresh": "重新整理",
+    "github": "GitHub 儲存庫",
+    "changeLanguage": "切換語言",
+    "untitled": "無標題",
+    "selectedText": "選取的文字",
+    "errorPrefix": "錯誤： ",
+    "selectFile": "選擇檔案",
+    "noOpenFiles": "無開啟檔案",
+    "linkCopied": "連結已複製到剪貼簿！"
+  },
+  "markdown": {
+    "copy": "複製",
+    "copied": "已複製！",
+    "copyCode": "複製程式碼",
+    "expand": "展開",
+    "collapse": "摺疊"
+  },
+  "outline": {
+    "noHeadings": "未找到標題"
+  },
+  "sidebar": {
+    "files": "檔案",
+    "outline": "大綱",
+    "searchPlaceholder": "搜尋筆記...",
+    "refreshList": "重新整理列表",
+    "noResults": "未找到符合的筆記。"
+  },
+  "copilot": {
+    "welcomeTitle": "你好，我是 Fia Copilot",
+    "welcomeSubtitle": "我可以幫你分析筆記，回答問題，以及產生新點子。",
+    "suggestions": {
+      "summarize": "總結這篇筆記",
+      "concepts": "解釋關鍵概念",
+      "draft": "續寫內容",
+      "related": "尋找相關筆記"
+    },
+    "thinkingProcess": "思考過程",
+    "newChat": "新對話",
+    "history": "歷史紀錄",
+    "noHistory": "暫無歷史紀錄",
+    "untitledChat": "未命名對話",
+    "deleteConfirmTitle": "刪除聊天紀錄？",
+    "deleteConfirmText": "此操作無法復原。",
+    "selectFile": "選擇檔案",
+    "uploadLocal": "上傳本機檔案",
+    "searchFiles": "搜尋檔案...",
+    "noMatchingFiles": "沒有符合的檔案",
+    "addCurrentFile": "加入當前檔案：",
+    "inputPlaceholder": "問點什麼...",
+    "downloading": "正在下載檔案內容...",
+    "errorPrefix": "**錯誤：** "
+  },
+  "errors": {
+    "openai": {
+      "apiKeyMissing": "OpenAI API Key 缺失。請設定 VITE_OPENAI_API_KEY。",
+      "apiError": "API 錯誤：{{statusText}}",
+      "responseBodyNull": "回應體為空"
+    },
+    "github": {
+      "repoNotConfigured": "GitHub 儲存庫路徑未配置",
+      "fetchRepoInfoFailed": "獲取儲存庫資訊失敗：{{status}} {{text}}",
+      "fetchTreeFailed": "獲取檔案樹失敗：{{status}} {{text}}",
+      "fetchContentFailed": "獲取內容失敗"
+    }
+  },
+  "common": {
+    "cancel": "取消",
+    "delete": "刪除",
+    "back": "返回",
+    "copy": "複製",
+    "regenerate": "重新生成"
+  }
+}
