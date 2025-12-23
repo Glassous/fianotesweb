@@ -1272,28 +1272,32 @@ const MainLayout: React.FC = () => {
                   <LanguageIcon />
                 </button>
                 
-                {isLangMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50">
+                <div className={`absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg py-1 border border-zinc-200 dark:border-zinc-700 z-50 transform transition-all duration-200 ease-out origin-top-right ${isLangMenuOpen ? "opacity-100 scale-100 translate-y-0 visible" : "opacity-0 scale-95 -translate-y-2 invisible pointer-events-none"}`}>
                     <button
-                      onClick={() => changeLanguage('en-US')}
+                      onClick={() => { changeLanguage('en-US'); setIsLangMenuOpen(false); }}
                       className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'en-US' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
                     >
                       English
                     </button>
                     <button
-                      onClick={() => changeLanguage('zh-CN')}
+                      onClick={() => { changeLanguage('zh-CN'); setIsLangMenuOpen(false); }}
                       className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-CN' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
                     >
                       简体中文
                     </button>
                     <button
-                      onClick={() => changeLanguage('zh-TW')}
+                      onClick={() => { changeLanguage('zh-TW'); setIsLangMenuOpen(false); }}
                       className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'zh-TW' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
                     >
                       繁體中文
                     </button>
-                  </div>
-                )}
+                    <button
+                      onClick={() => { changeLanguage('ja-JP'); setIsLangMenuOpen(false); }}
+                      className={`block w-full text-left px-4 py-2 text-sm ${i18n.language === 'ja-JP' ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                    >
+                      日本語
+                    </button>
+                </div>
               </div>
 
               {/* Copilot Toggle Button */}
@@ -1390,7 +1394,7 @@ const MainLayout: React.FC = () => {
                                       <div className="flex items-center gap-2">
                                         <LanguageIcon />
                                         <span>
-                                          {{'zh-CN': '简体中文', 'zh-TW': '繁體中文', 'en-US': 'English'}[i18n.language] || i18n.language}
+                                          {{'zh-CN': '简体中文', 'zh-TW': '繁體中文', 'en-US': 'English', 'ja-JP': '日本語'}[i18n.language] || i18n.language}
                                         </span>
                                       </div>
                                       <svg className="w-4 h-4 text-zinc-400 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1437,7 +1441,8 @@ const MainLayout: React.FC = () => {
                                   {[
                                       { code: 'en-US', name: 'English' },
                                       { code: 'zh-CN', name: '简体中文' },
-                                      { code: 'zh-TW', name: '繁體中文' }
+                                      { code: 'zh-TW', name: '繁體中文' },
+                                      { code: 'ja-JP', name: '日本語' }
                                   ].map((lang) => (
                                       <button
                                           key={lang.code}

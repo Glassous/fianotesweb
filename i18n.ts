@@ -5,6 +5,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import zhCN from './locales/zh-CN.json';
 import enUS from './locales/en-US.json';
 import zhTW from './locales/zh-TW.json';
+import jaJP from './locales/ja-JP.json';
 
 // the translations
 const resources = {
@@ -25,6 +26,12 @@ const resources = {
   },
   'zh-HK': {
     translation: zhTW,
+  },
+  'ja': {
+    translation: jaJP,
+  },
+  'ja-JP': {
+    translation: jaJP,
   },
 };
 

@@ -1,0 +1,100 @@
+{
+  "app": {
+    "title": "FiaNotes",
+    "loading": "読み込み中...",
+    "preview": "プレビュー",
+    "source": "ソース",
+    "exportSvg": "SVGをエクスポート",
+    "words": "文字",
+    "closeSidebar": "サイドバーを閉じる",
+    "openSidebar": "サイドバーを開く",
+    "closeFile": "ファイルを閉じる",
+    "copilot": "Fia Copilot",
+    "theme": {
+      "light": "ライトモード",
+      "dark": "ダークモード",
+      "system": "システムに従う"
+    },
+    "welcomeTitle": "FiaNotesへようこそ",
+    "welcomeSubtitle": "ノートを選択して閲覧を開始します。",
+    "askCopilot": "Fia Copilotに尋ねる",
+    "copilotHelp": "AIアシスタント機能を取得",
+    "recentFiles": "最近開いたファイル",
+    "clearRecent": "履歴を消去",
+    "removeRecent": "削除",
+    "open": "開く",
+    "share": "共有",
+    "download": "ダウンロード",
+    "refresh": "更新",
+    "github": "GitHub リポジトリ",
+    "changeLanguage": "言語を切り替える",
+    "untitled": "無題",
+    "selectedText": "選択されたテキスト",
+    "errorPrefix": "エラー： ",
+    "selectFile": "ファイルを選択",
+    "noOpenFiles": "開いているファイルはありません",
+    "linkCopied": "リンクがクリップボードにコピーされました！"
+  },
+  "markdown": {
+    "copy": "コピー",
+    "copied": "コピーしました！",
+    "copyCode": "コードをコピー",
+    "expand": "展開",
+    "collapse": "折りたたむ"
+  },
+  "outline": {
+    "noHeadings": "見出しが見つかりません"
+  },
+  "sidebar": {
+    "files": "ファイル",
+    "outline": "アウトライン",
+    "searchPlaceholder": "ノートを検索...",
+    "refreshList": "リストを更新",
+    "noResults": "一致するノートが見つかりません。"
+  },
+  "copilot": {
+    "welcomeTitle": "こんにちは、Fia Copilotです",
+    "welcomeSubtitle": "ノートの分析、質問への回答、新しいアイデアの生成をお手伝いします。",
+    "suggestions": {
+      "summarize": "このノートを要約",
+      "concepts": "重要な概念を説明",
+      "draft": "続きを書く",
+      "related": "関連するノートを探す"
+    },
+    "thinkingProcess": "思考プロセス",
+    "newChat": "新しいチャット",
+    "history": "履歴",
+    "noHistory": "履歴はありません",
+    "untitledChat": "無題のチャット",
+    "deleteConfirmTitle": "チャット履歴を削除しますか？",
+    "deleteConfirmText": "この操作は取り消せません。",
+    "selectFile": "ファイルを選択",
+    "uploadLocal": "ローカルファイルをアップロード",
+    "searchFiles": "ファイルを検索...",
+    "noMatchingFiles": "一致するファイルがありません",
+    "addCurrentFile": "現在のファイルを追加：",
+    "inputPlaceholder": "何か質問してください...",
+    "downloading": "ファイルの内容をダウンロード中...",
+    "errorPrefix": "**エラー：** "
+  },
+  "errors": {
+    "openai": {
+      "apiKeyMissing": "OpenAI APIキーが見つかりません。VITE_OPENAI_API_KEYを設定してください。",
+      "apiError": "APIエラー：{{statusText}}",
+      "responseBodyNull": "レスポンス本文が空です"
+    },
+    "github": {
+      "repoNotConfigured": "GitHubリポジトリパスが設定されていません",
+      "fetchRepoInfoFailed": "リポジトリ情報の取得に失敗しました：{{status}} {{text}}",
+      "fetchTreeFailed": "ファイルツリーの取得に失敗しました：{{status}} {{text}}",
+      "fetchContentFailed": "コンテンツの取得に失敗しました"
+    }
+  },
+  "common": {
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "back": "戻る",
+    "copy": "コピー",
+    "regenerate": "再生成"
+  }
+}
