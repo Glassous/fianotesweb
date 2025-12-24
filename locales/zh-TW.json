@@ -6,6 +6,13 @@
     "source": "原始碼",
     "exportSvg": "匯出 SVG",
     "words": "字",
+    "stats": {
+      "characters": "字元",
+      "words": "詞",
+      "lines": "行",
+      "readTime": "閱讀時長",
+      "minutes": "分鐘"
+    },
     "closeSidebar": "關閉側邊欄",
     "openSidebar": "開啟側邊欄",
     "closeFile": "關閉檔案",

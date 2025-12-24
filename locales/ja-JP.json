@@ -6,6 +6,13 @@
     "source": "ソース",
     "exportSvg": "SVGをエクスポート",
     "words": "文字",
+    "stats": {
+      "characters": "文字",
+      "words": "単語",
+      "lines": "行",
+      "readTime": "読書時間",
+      "minutes": "分"
+    },
     "closeSidebar": "サイドバーを閉じる",
     "openSidebar": "サイドバーを開く",
     "closeFile": "ファイルを閉じる",

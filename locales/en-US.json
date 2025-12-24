@@ -6,6 +6,13 @@
     "source": "Source",
     "exportSvg": "Export SVG",
     "words": "words",
+    "stats": {
+      "characters": "Characters",
+      "words": "Words",
+      "lines": "Lines",
+      "readTime": "Reading Time",
+      "minutes": "min"
+    },
     "closeSidebar": "Close Sidebar",
     "openSidebar": "Open Sidebar",
     "closeFile": "Close file",

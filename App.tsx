@@ -41,6 +41,7 @@ import { fetchNotesTree, fetchNoteContent, fetchBlobContent } from "./services/g
 import { useChatContext } from "./contexts/ChatContext";
 
 import { getFileIcon } from "./components/FileIcons";
+import { getNoteStats } from "./utils/wordCount";
 
 // --- Icons ---
 const MenuIcon = () => (
@@ -301,6 +302,10 @@ const MainLayout: React.FC = () => {
   const [mobileMenuLevel, setMobileMenuLevel] = useState<'main' | 'language'>('main');
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
+  // --- Stats Popover State ---
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
+
   // --- Toast State ---
   const [toast, setToast] = useState<{ message: string; url?: string } | null>(null);
 
@@ -311,6 +316,9 @@ const MainLayout: React.FC = () => {
       }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
+      }
+      if (statsRef.current && !statsRef.current.contains(event.target as Node)) {
+        setIsStatsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -816,10 +824,10 @@ const MainLayout: React.FC = () => {
     setViewMode("preview");
   }, [activeFilePath]);
 
-  // Word count calculation
-  const wordCount = useMemo(() => {
-    if (!currentNote?.content) return 0;
-    return currentNote.content.split(/\s+/).filter(Boolean).length;
+  // Note stats calculation
+  const noteStats = useMemo(() => {
+    if (!currentNote?.content) return { characters: 0, words: 0, lines: 0, readTime: 0 };
+    return getNoteStats(currentNote.content);
   }, [currentNote]);
 
   const handleSelectNote = (note: NoteItem) => {
@@ -1223,9 +1231,42 @@ const MainLayout: React.FC = () => {
                     {new Date(currentNote.metadata.date).toLocaleDateString()}
                   </span>
                 )}
-                <span className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md transition-colors">
-                  {wordCount} {t('app.words')}
-                </span>
+                <div className="relative" ref={statsRef}>
+                  <button 
+                    onClick={() => setIsStatsOpen(!isStatsOpen)}
+                    className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center gap-2"
+                  >
+                    <span>{noteStats.characters} {t('app.stats.characters')}</span>
+                  </button>
+
+                  {/* Stats Popup */}
+                  <div 
+                    className={`absolute top-full mt-2 right-0 w-48 bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 p-3 transform transition-all duration-200 ease-out origin-top-right z-50 ${
+                      isStatsOpen 
+                        ? "opacity-100 scale-100 translate-y-0 visible" 
+                        : "opacity-0 scale-95 -translate-y-2 invisible pointer-events-none"
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-zinc-500 dark:text-zinc-400">{t('app.stats.characters')}</span>
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">{noteStats.characters}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-zinc-500 dark:text-zinc-400">{t('app.stats.words')}</span>
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">{noteStats.words}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-zinc-500 dark:text-zinc-400">{t('app.stats.lines')}</span>
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">{noteStats.lines}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm pt-2 border-t border-zinc-100 dark:border-zinc-700 mt-2">
+                        <span className="text-zinc-500 dark:text-zinc-400">{t('app.stats.readTime')}</span>
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">{noteStats.readTime} {t('app.stats.minutes')}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
