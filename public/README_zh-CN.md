@@ -48,7 +48,7 @@ Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面�
 
 1.  在您的 GitHub 笔记仓库的**根目录**或 **`public/` 文件夹**中创建一个名为 `password.fianotes` 的文件。
 2.  在此文件中写入您的密码。
-    *   **选项 1（推荐）：** 写入密码的 SHA-256 哈希值。您可以使用在线工具或命令行生成（例如 `echo -n "yourpassword" | sha256sum`）。
+    *   **选项 1（推荐）：** 写入密码的 SHA-256 哈希值。您可以使用[在线工具](https://sha256.fiacloud.top)或命令行生成（例如 `echo -n "yourpassword" | sha256sum`）。
     *   **选项 2：** 以纯文本形式写入密码。
 3.  提交该文件。
 
