@@ -47,7 +47,9 @@ The application is configured using environment variables. You can set these in 
 You can password-protect the AI features of your notebook. This is useful if you want to share your notes publicly but restrict AI usage (which consumes your API quota) to yourself.
 
 1.  Create a file named `password.fianotes` in the root of your GitHub notes repository **OR** in the `public/` folder of your repository.
-2.  Write your password in this file (plain text).
+2.  Write your password in this file.
+    *   **Option 1 (Recommended):** Write the SHA-256 hash of your password. You can generate it using online tools or command line (e.g., `echo -n "yourpassword" | sha256sum`).
+    *   **Option 2:** Write the password in plain text.
 3.  Commit the file.
 
 When this file exists in either location, the AI sidebar will require a password to function. If the file does not exist, AI features are open to everyone.

@@ -182,9 +182,25 @@ export const verifyPassword = async (inputPassword: string): Promise<boolean> =>
       truePassword = await getPasswordContent('public/password.fianotes');
   }
 
-  if (truePassword === null) return false; // No password file found implies no lock, but here we assume lock is active if checkPasswordProtection returned true. 
-  // Wait, if checkPasswordProtection returns true, one of them must exist. 
-  // But strictly speaking, if verify is called, we expect a password.
+  if (truePassword === null) return false; 
   
-  return truePassword.trim() === inputPassword.trim();
+  const storedValue = truePassword.trim();
+  
+  // Hash the input password using SHA-256
+  const sha256 = async (message: string) => {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const inputHash = await sha256(inputPassword);
+
+  // Check if matches hash
+  if (storedValue === inputHash) {
+      return true;
+  }
+
+  // Fallback: Check if matches plaintext
+  return storedValue === inputPassword.trim();
 };
