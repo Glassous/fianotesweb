@@ -1046,7 +1046,7 @@ const MainLayout: React.FC = () => {
       `}
       >
           {/* Top Bar / Header */}
-          <header className="h-12 bg-gray-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-end px-2 shrink-0 justify-between z-20 transition-colors duration-200 pt-2 gap-2">
+          <header className="h-12 bg-gray-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-end px-2 shrink-0 justify-between transition-colors duration-200 pt-2 gap-2">
            <div className="flex items-center min-w-0 flex-1 h-full">
              <button
                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
