@@ -667,8 +667,6 @@ const MainLayout: React.FC = () => {
     if (currentNote && currentNote.content && currentNote.filePath.endsWith(".md")) {
       const headings = extractHeadings(currentNote.content);
       setOutlineItems(headings);
-      // Auto-switch to outline tab when opening/loading a markdown file
-      setSidebarTab("outline");
     } else {
       setOutlineItems([]);
       setActiveHeadingId(null);
