@@ -42,6 +42,11 @@
     "noOpenFiles": "開いているファイルはありません",
     "linkCopied": "リンクがクリップボードにコピーされました！"
   },
+  "map": {
+    "zoomIn": "拡大",
+    "zoomOut": "縮小",
+    "reset": "リセット"
+  },
   "markdown": {
     "copy": "コピー",
     "copied": "コピーしました！",

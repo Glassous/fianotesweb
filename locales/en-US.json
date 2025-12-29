@@ -42,6 +42,11 @@
     "noOpenFiles": "No open files",
     "linkCopied": "Link copied to clipboard!"
   },
+  "map": {
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "reset": "Reset"
+  },
   "markdown": {
     "copy": "Copy",
     "copied": "Copied!",
