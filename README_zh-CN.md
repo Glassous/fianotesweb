@@ -1,6 +1,6 @@
 # Fianotes Web
 
-[English Version](./README.md)
+[English](./README.md) | [简体中文](./README_zh-CN.md) | [繁體中文](./README_zh-TW.md) | [日本語](./README_ja-JP.md)
 
 Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面展示您的 Markdown 笔记。它具有 AI 辅助（Copilot）、语法高亮以及与 GitHub 无缝集成进行实时笔记存储和检索的功能。
 
@@ -39,6 +39,8 @@ Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面�
 | `VITE_OPENAI_BASE_URL` | OpenAI API 的基础 URL（默认：`https://api.openai.com/v1`）。 | 否 |
 | `VITE_OPENAI_API_KEY` | 用于 Copilot 功能的 OpenAI API 密钥。 | 否 |
 | `VITE_OPENAI_MODEL` | 使用的 AI 模型（默认：`gpt-5`）。 | 否 |
+| `VITE_ENABLE_AI_PASSWORD` | 启用 AI 密码保护（默认：`false`）。 | 否 |
+| `VITE_ENABLE_HASH_PASSWORD` | 启用密码的 SHA-256 哈希校验（默认：`false`）。如果您的密码文件中存储的是哈希值，请设为 `true`。 | 否 |
 
 *注意：如果未提供 `VITE_OPENAI_BASE_URL` 或 `VITE_OPENAI_MODEL`，它们将分别默认为 OpenAI 的官方 API 和 `gpt-5`。*
 
@@ -46,13 +48,17 @@ Fianotes Web 是一个自托管的 Web 笔记平台，旨在以精美的界面�
 
 您可以为笔记本的 AI 功能设置密码保护。如果您想公开分享笔记，但希望限制 AI 使用（因为会消耗您的 API 配额）仅供自己使用，这非常有用。
 
-1.  在您的 GitHub 笔记仓库的**根目录**或 **`public/` 文件夹**中创建一个名为 `password.fianotes` 的文件。
-2.  在此文件中写入您的密码。
-    *   **选项 1（推荐）：** 写入密码的 SHA-256 哈希值。您可以使用[在线工具](https://sha256.fiacloud.top)或命令行生成（例如 `echo -n "yourpassword" | sha256sum`）。
-    *   **选项 2：** 以纯文本形式写入密码。
-3.  提交该文件。
+1.  **启用密码保护**：设置环境变量 `VITE_ENABLE_AI_PASSWORD=true`。
+2.  **选择校验模式**：
+    *   **哈希模式（推荐）**：设置 `VITE_ENABLE_HASH_PASSWORD=true`。系统将验证密码文件中的内容是否为 SHA-256 哈希值。
+    *   **明文模式**：设置 `VITE_ENABLE_HASH_PASSWORD=false`（默认）。系统将直接比对明文密码。
+3.  在您的 GitHub 笔记仓库的**根目录**或 **`public/` 文件夹**中创建一个名为 `password.fianotes` 的文件。
+4.  根据步骤 2 的选择，在此文件中写入内容：
+    *   如果使用**哈希模式**，写入密码的 SHA-256 哈希值。您可以使用[在线工具](https://sha256.fiacloud.top)或命令行生成（例如 `echo -n "yourpassword" | sha256sum`）。
+    *   如果使用**明文模式**，直接写入密码。
+5.  提交该文件。
 
-当任一位置存在此文件时，AI 侧边栏将需要密码才能运行。如果文件不存在，AI 功能将对所有人开放。
+当 `VITE_ENABLE_AI_PASSWORD` 为 true 且密码文件存在时，AI 侧边栏将需要密码。如果 `VITE_ENABLE_AI_PASSWORD` 为 false，将忽略密码文件。
 
 **关于文件位置的说明：**
 - **GitHub 笔记仓库的根目录**：设置最简单。

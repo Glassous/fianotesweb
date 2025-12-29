@@ -1,6 +1,6 @@
 # Fianotes Web
 
-[中文版](./README_zh-CN.md)
+[English](./README_en-US.md) | [简体中文](./README_zh-CN.md) | [繁體中文](./README_zh-TW.md) | [日本語](./README_ja-JP.md)
 
 Fianotes Web is a self-hosted, web-based note-taking platform designed to render your Markdown notes with a beautiful interface. It features AI-powered assistance (Copilot), syntax highlighting, and seamless integration with GitHub for real-time note storage and retrieval.
 
@@ -46,13 +46,17 @@ The application is configured using environment variables. You can set these in 
 
 You can password-protect the AI features of your notebook. This is useful if you want to share your notes publicly but restrict AI usage (which consumes your API quota) to yourself.
 
-1.  Create a file named `password.fianotes` in the root of your GitHub notes repository **OR** in the `public/` folder of your repository.
-2.  Write your password in this file.
-    *   **Option 1 (Recommended):** Write the SHA-256 hash of your password. You can generate it using [online tools](https://sha256.fiacloud.top) or command line (e.g., `echo -n "yourpassword" | sha256sum`).
-    *   **Option 2:** Write the password in plain text.
-3.  Commit the file.
+1.  **Enable Password Protection**: Set the environment variable `VITE_ENABLE_AI_PASSWORD=true`.
+2.  **Choose Verification Mode**:
+    *   **Hash Mode (Recommended)**: Set `VITE_ENABLE_HASH_PASSWORD=true`. The system will expect a SHA-256 hash in your password file.
+    *   **Plain Text Mode**: Set `VITE_ENABLE_HASH_PASSWORD=false` (default). The system will expect a plain text password.
+3.  Create a file named `password.fianotes` in the root of your GitHub notes repository **OR** in the `public/` folder of your repository.
+4.  Write your password in this file based on your choice in step 2:
+    *   If using **Hash Mode**, write the SHA-256 hash. You can generate it using [online tools](https://sha256.fiacloud.top) or command line (e.g., `echo -n "yourpassword" | sha256sum`).
+    *   If using **Plain Text Mode**, write the password directly.
+5.  Commit the file.
 
-When this file exists in either location, the AI sidebar will require a password to function. If the file does not exist, AI features are open to everyone.
+When `VITE_ENABLE_AI_PASSWORD` is true and the password file exists, the AI sidebar will require a password. If `VITE_ENABLE_AI_PASSWORD` is false, the password file is ignored.
 
 **Note on File Location:**
 - **Root Directory in GitHub Notes Repository**: Easiest to set up.
