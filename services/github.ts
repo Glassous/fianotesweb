@@ -3,6 +3,8 @@ import i18n from "../i18n";
 
 const REPO_PATH = process.env.NOTES_REPO_PATH;
 const TOKEN = process.env.NOTES_PAT;
+const ENABLE_AI_PASSWORD = process.env.VITE_ENABLE_AI_PASSWORD === 'true';
+const ENABLE_HASH_PASSWORD = process.env.VITE_ENABLE_HASH_PASSWORD === 'true';
 
 export const isGitHubConfigured = () => {
   return !!REPO_PATH;
@@ -140,7 +142,7 @@ export const fetchBlobContentAsBase64 = async (url: string): Promise<string> => 
 };
 
 export const checkPasswordProtection = async (): Promise<boolean> => {
-  if (!REPO_PATH) return false;
+  if (!REPO_PATH || !ENABLE_AI_PASSWORD) return false;
   
   const checkFile = async (path: string) => {
       try {
@@ -186,21 +188,19 @@ export const verifyPassword = async (inputPassword: string): Promise<boolean> =>
   
   const storedValue = truePassword.trim();
   
-  // Hash the input password using SHA-256
-  const sha256 = async (message: string) => {
-    const msgBuffer = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  };
+  if (ENABLE_HASH_PASSWORD) {
+    // Hash the input password using SHA-256
+    const sha256 = async (message: string) => {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    };
 
-  const inputHash = await sha256(inputPassword);
-
-  // Check if matches hash
-  if (storedValue === inputHash) {
-      return true;
+    const inputHash = await sha256(inputPassword);
+    return storedValue === inputHash;
   }
-
-  // Fallback: Check if matches plaintext
+  
+  // Plain text check
   return storedValue === inputPassword.trim();
 };
