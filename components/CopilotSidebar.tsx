@@ -416,7 +416,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
       
       const success = await verifyAiAccess(passwordInput);
       if (!success) {
-          setVerifyError("Incorrect password");
+          setVerifyError(t('copilot.password.incorrect'));
       } else {
           setPasswordInput("");
       }
@@ -874,14 +874,14 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                     </svg>
                  </div>
                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
-                     Password required
+                     {t('copilot.password.required')}
                  </h3>
                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
-                     This repository has enabled AI lock. Please enter the password to continue.
+                     {t('copilot.password.description')}
                  </p>
                  {isPasswordChanged && (
                     <div className="mb-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/30 rounded-lg text-xs text-yellow-700 dark:text-yellow-400">
-                        Password has been changed. Please re-enter.
+                        {t('copilot.password.changed')}
                     </div>
                  )}
                  <form onSubmit={handlePasswordSubmit} className="w-full max-w-xs">
@@ -889,7 +889,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                          type="password"
                          value={passwordInput}
                          onChange={e => setPasswordInput(e.target.value)}
-                         placeholder="Enter password"
+                         placeholder={t('copilot.password.placeholder')}
                          className="w-full px-4 py-2 mb-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                          autoFocus
                      />
@@ -898,7 +898,7 @@ export const CopilotSidebar: React.FC<CopilotSidebarProps> = ({
                          disabled={isVerifying}
                          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                      >
-                         {isVerifying ? "Verifying..." : "Unlock"}
+                         {isVerifying ? t('copilot.password.verifying') : t('copilot.password.unlock')}
                      </button>
                      {verifyError && <p className="mt-3 text-xs text-red-500">{verifyError}</p>}
                  </form>

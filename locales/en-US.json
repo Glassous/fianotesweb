@@ -87,7 +87,16 @@
     "addCurrentFile": "Add current file: ",
     "inputPlaceholder": "Ask anything...",
     "downloading": "Downloading file content...",
-    "errorPrefix": "**Error:** "
+    "errorPrefix": "**Error:** ",
+    "password": {
+      "required": "Password required",
+      "description": "This repository has enabled AI lock. Please enter the password to continue.",
+      "changed": "Password has been changed. Please re-enter.",
+      "placeholder": "Enter password",
+      "verifying": "Verifying...",
+      "unlock": "Unlock",
+      "incorrect": "Incorrect password"
+    }
   },
   "errors": {
     "openai": {

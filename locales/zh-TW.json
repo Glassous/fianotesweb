@@ -87,7 +87,16 @@
     "addCurrentFile": "加入當前檔案：",
     "inputPlaceholder": "問點什麼...",
     "downloading": "正在下載檔案內容...",
-    "errorPrefix": "**錯誤：** "
+    "errorPrefix": "**錯誤：** ",
+    "password": {
+      "required": "需要密碼",
+      "description": "此倉庫已啟用 AI 鎖。請輸入密碼繼續。",
+      "changed": "密碼已更改。請重新輸入。",
+      "placeholder": "輸入密碼",
+      "verifying": "驗證中...",
+      "unlock": "解鎖",
+      "incorrect": "密碼錯誤"
+    }
   },
   "errors": {
     "openai": {

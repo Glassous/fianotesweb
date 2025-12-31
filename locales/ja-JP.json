@@ -87,7 +87,16 @@
     "addCurrentFile": "現在のファイルを追加：",
     "inputPlaceholder": "何か質問してください...",
     "downloading": "ファイルの内容をダウンロード中...",
-    "errorPrefix": "**エラー：** "
+    "errorPrefix": "**エラー：** ",
+    "password": {
+      "required": "パスワードが必要です",
+      "description": "このリポジトリはAIロックが有効になっています。続行するにはパスワードを入力してください。",
+      "changed": "パスワードが変更されました。再入力してください。",
+      "placeholder": "パスワードを入力",
+      "verifying": "確認中...",
+      "unlock": "ロック解除",
+      "incorrect": "パスワードが間違っています"
+    }
   },
   "errors": {
     "openai": {
