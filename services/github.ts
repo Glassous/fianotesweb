@@ -36,6 +36,20 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
         sha: "local-readme-cn",
         url: "/README_zh-CN.md",
       },
+      {
+        path: "指南(繁體).md",
+        mode: "100644",
+        type: "blob",
+        sha: "local-readme-tw",
+        url: "/README_zh-TW.md",
+      },
+      {
+        path: "ガイド.md",
+        mode: "100644",
+        type: "blob",
+        sha: "local-readme-jp",
+        url: "/README_ja-JP.md",
+      },
     ];
   }
   
