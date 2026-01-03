@@ -19,6 +19,7 @@ interface MarkdownRendererProps {
   variant?: "document" | "chat";
   onSelectionAction?: (text: string) => void;
   onInternalLinkClick?: (id: string) => void;
+  align?: "left" | "center";
 }
 
 // --- Icons ---
@@ -381,11 +382,16 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   variant = "document",
   onSelectionAction,
   onInternalLinkClick,
+  align = "left",
 }) => {
   const { t } = useTranslation();
   const containerClasses = variant === "document"
     ? "markdown-body p-8 bg-white dark:bg-zinc-950 min-h-screen transition-colors duration-200 text-zinc-900 dark:text-zinc-100 relative"
-    : "markdown-body bg-transparent text-zinc-800 dark:text-zinc-200 text-sm"; 
+    : "markdown-body bg-transparent text-zinc-800 dark:text-zinc-200 text-sm";
+  
+  const contentWrapperClasses = variant === "document" && align === "center"
+    ? "max-w-4xl mx-auto"
+    : ""; 
 
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null);
 
@@ -626,35 +632,37 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         }
       `}</style>
 
-      {parts.map((part, index) => {
-        if (part.startsWith("<think>")) {
-          let inner = part.replace("<think>", "");
-          if (inner.endsWith("</think>")) {
-            inner = inner.slice(0, -8);
+      <div className={contentWrapperClasses}>
+        {parts.map((part, index) => {
+          if (part.startsWith("<think>")) {
+            let inner = part.replace("<think>", "");
+            if (inner.endsWith("</think>")) {
+              inner = inner.slice(0, -8);
+            }
+            return <ThinkingBlock key={index} content={inner} isDark={isDark} />;
           }
-          return <ThinkingBlock key={index} content={inner} isDark={isDark} />;
-        }
-        
-        if (!part) return null;
+          
+          if (!part) return null;
 
-        // Transform [map:lat,lng] to internal image syntax
-        const processedPart = part.replace(
-            /\[map:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g, 
-            (match, lat, lng) => `![map-view](https://fianotes-map-internal/view?lat=${lat}&lng=${lng})`
-        );
+          // Transform [map:lat,lng] to internal image syntax
+          const processedPart = part.replace(
+              /\[map:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g, 
+              (match, lat, lng) => `![map-view](https://fianotes-map-internal/view?lat=${lat}&lng=${lng})`
+          );
 
-        return (
-          <ReactMarkdown
-            key={index}
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex]}
-            // 传入 memoized 的 components
-            components={markdownComponents}
-          >
-            {processedPart}
-          </ReactMarkdown>
-        );
-      })}
+          return (
+            <ReactMarkdown
+              key={index}
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              // 传入 memoized 的 components
+              components={markdownComponents}
+            >
+              {processedPart}
+            </ReactMarkdown>
+          );
+        })}
+      </div>
 
       {selectionMenu && (
         <button

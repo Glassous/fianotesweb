@@ -554,6 +554,17 @@ const MainLayout: React.FC = () => {
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // --- Markdown Alignment State ---
+  const [markdownAlign, setMarkdownAlign] = useState<"left" | "center">(() => {
+    return (localStorage.getItem("markdownAlign") as "left" | "center") || "left";
+  });
+
+  const toggleMarkdownAlign = () => {
+    const newAlign = markdownAlign === "left" ? "center" : "left";
+    setMarkdownAlign(newAlign);
+    localStorage.setItem("markdownAlign", newAlign);
+  };
+
   useEffect(() => {
     const root = window.document.documentElement;
     const systemQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -1305,6 +1316,48 @@ const MainLayout: React.FC = () => {
                         <span className="text-zinc-500 dark:text-zinc-400">{t('app.stats.readTime')}</span>
                         <span className="font-medium text-zinc-900 dark:text-zinc-100">{noteStats.readTime} {t('app.stats.minutes')}</span>
                       </div>
+                      
+                      {/* Alignment Toggle (Desktop Only) */}
+                      <div className="pt-2 border-t border-zinc-100 dark:border-zinc-700 mt-2">
+                        <div className="flex gap-0.5 w-full bg-zinc-100 dark:bg-zinc-700/50 p-0.5 rounded-lg">
+                          <button
+                            onClick={() => {
+                              if (markdownAlign !== "left") {
+                                setMarkdownAlign("left");
+                                localStorage.setItem("markdownAlign", "left");
+                              }
+                            }}
+                            className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                              markdownAlign === "left"
+                                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                            }`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h14" />
+                            </svg>
+                            <span>{t('app.stats.alignLeft')}</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (markdownAlign !== "center") {
+                                setMarkdownAlign("center");
+                                localStorage.setItem("markdownAlign", "center");
+                              }
+                            }}
+                            className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                              markdownAlign === "center"
+                                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                            }`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M7 12h10M5 18h14" />
+                            </svg>
+                            <span>{t('app.stats.alignCenter')}</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1659,6 +1712,7 @@ const MainLayout: React.FC = () => {
                         refreshKey={refreshKey}
                         isDarkMode={isDarkMode}
                         onAskCopilot={handleAskCopilot}
+                        markdownAlign={markdownAlign}
                     />
                 );
             })

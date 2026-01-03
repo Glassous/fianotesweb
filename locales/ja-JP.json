@@ -11,7 +11,9 @@
       "words": "単語",
       "lines": "行",
       "readTime": "読書時間",
-      "minutes": "分"
+      "minutes": "分",
+      "alignLeft": "左揃え",
+      "alignCenter": "中央揃え"
     },
     "closeSidebar": "サイドバーを閉じる",
     "openSidebar": "サイドバーを開く",

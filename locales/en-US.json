@@ -11,7 +11,9 @@
       "words": "Words",
       "lines": "Lines",
       "readTime": "Reading Time",
-      "minutes": "min"
+      "minutes": "min",
+      "alignLeft": "Align Left",
+      "alignCenter": "Align Center"
     },
     "closeSidebar": "Close Sidebar",
     "openSidebar": "Open Sidebar",

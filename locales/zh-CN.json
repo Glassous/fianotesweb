@@ -11,7 +11,9 @@
       "words": "词",
       "lines": "行",
       "readTime": "阅读时长",
-      "minutes": "分钟"
+      "minutes": "分钟",
+      "alignLeft": "居左",
+      "alignCenter": "居中"
     },
     "closeSidebar": "关闭侧边栏",
     "openSidebar": "打开侧边栏",

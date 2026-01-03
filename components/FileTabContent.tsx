@@ -16,6 +16,7 @@ interface FileTabContentProps {
   refreshKey: number;
   isDarkMode: boolean;
   onAskCopilot: (text: string) => void;
+  markdownAlign?: "left" | "center";
 }
 
 export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
@@ -27,6 +28,7 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
   refreshKey,
   isDarkMode,
   onAskCopilot,
+  markdownAlign = "left",
 }) => {
   // Stable click handler for this specific file tab
   // This ensures that switching tabs (changing activeFilePath) does not recreate this function
@@ -99,6 +101,7 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
                     isDark={isDarkMode} 
                     onSelectionAction={onAskCopilot}
                     onInternalLinkClick={handleHeadingClick}
+                    align={markdownAlign}
                 />
                 )}
             </div>
