@@ -87,6 +87,17 @@ const ChevronDownIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const ChevronUpIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className || "w-5 h-5"}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+  </svg>
+);
+
 const SunIcon = () => (
   <svg
     className="w-5 h-5"
@@ -279,6 +290,10 @@ const MainLayout: React.FC = () => {
 
   const { isAiLocked } = useChatContext();
 
+  // --- Header State ---
+  const [isHeaderPinned, setIsHeaderPinned] = useState(true);
+  const [isHeaderHovered, setIsHeaderHovered] = useState(false);
+
   // --- State ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
@@ -375,8 +390,14 @@ const MainLayout: React.FC = () => {
 
 
   // --- Resize State (Desktop Only) ---
-  const [sidebarWidth, setSidebarWidth] = useState(288);
-  const [copilotWidth, setCopilotWidth] = useState(320);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem("sidebarWidth");
+    return saved ? parseInt(saved, 10) : 288;
+  });
+  const [copilotWidth, setCopilotWidth] = useState(() => {
+    const saved = localStorage.getItem("copilotWidth");
+    return saved ? parseInt(saved, 10) : 320;
+  });
   const [isResizing, setIsResizing] = useState(false); // Track global resize state for iframe fix
   const isResizingSidebar = useRef(false);
   const isResizingCopilot = useRef(false);
@@ -384,8 +405,8 @@ const MainLayout: React.FC = () => {
   // Refs for Direct DOM Manipulation (Performance)
   const sidebarRef = useRef<HTMLElement>(null);
   const copilotRef = useRef<HTMLElement>(null);
-  const currentSidebarWidthRef = useRef(288);
-  const currentCopilotWidthRef = useRef(320);
+  const currentSidebarWidthRef = useRef(sidebarWidth);
+  const currentCopilotWidthRef = useRef(copilotWidth);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -418,6 +439,7 @@ const MainLayout: React.FC = () => {
       if (isResizingSidebar.current) {
         isResizingSidebar.current = false;
         setSidebarWidth(currentSidebarWidthRef.current);
+        localStorage.setItem("sidebarWidth", currentSidebarWidthRef.current.toString());
         if (sidebarRef.current) {
             sidebarRef.current.style.transition = ''; // Restore transition
         }
@@ -425,6 +447,7 @@ const MainLayout: React.FC = () => {
       if (isResizingCopilot.current) {
         isResizingCopilot.current = false;
         setCopilotWidth(currentCopilotWidthRef.current);
+        localStorage.setItem("copilotWidth", currentCopilotWidthRef.current.toString());
         // Transition restoration is handled by CopilotSidebar prop
       }
       document.body.style.cursor = "default";
@@ -1043,8 +1066,28 @@ const MainLayout: React.FC = () => {
         ${isMobile && isSidebarOpen ? "blur-sm scale-[0.98] pointer-events-none select-none" : ""}
       `}
       >
+          {/* Header Hover Sensor */}
+          {!isHeaderPinned && !isMobile && (
+            <div 
+              className="absolute top-0 left-0 right-0 h-4 z-50"
+              onMouseEnter={() => setIsHeaderHovered(true)}
+            />
+          )}
+
+          {/* Header Placeholder for Pinned State */}
+          <div className={`shrink-0 transition-all duration-300 ease-in-out ${isHeaderPinned ? 'h-12' : 'h-0'}`} />
+
           {/* Top Bar / Header */}
-          <header className="h-12 bg-gray-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-end px-2 shrink-0 justify-between transition-colors duration-200 pt-2 gap-2">
+          <header 
+            onMouseLeave={() => !isHeaderPinned && setIsHeaderHovered(false)}
+            className={`
+              absolute top-0 left-0 right-0 z-40
+              h-12 bg-gray-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 
+              flex items-end px-2 shrink-0 justify-between 
+              transition-all duration-300 ease-in-out pt-2 gap-2
+              ${(isHeaderPinned || isHeaderHovered) ? 'translate-y-0 shadow-sm' : '-translate-y-full opacity-0 pointer-events-none'}
+            `}
+          >
            <div className="flex items-center min-w-0 flex-1 h-full">
              <button
                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -1370,6 +1413,15 @@ const MainLayout: React.FC = () => {
                 title={t('app.github')}
               >
                 <GithubIcon />
+              </button>
+
+              {/* Header Toggle Button (Desktop Only) */}
+              <button
+                onClick={() => setIsHeaderPinned(!isHeaderPinned)}
+                className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none hidden md:block"
+                title={isHeaderPinned ? t('app.hideHeader', { defaultValue: 'Hide Header' }) : t('app.showHeader', { defaultValue: 'Pin Header' })}
+              >
+                {isHeaderPinned ? <ChevronUpIcon /> : <ChevronDownIcon />}
               </button>
             </div>
 
