@@ -281,6 +281,14 @@ interface RecentFile {
   timestamp: number;
 }
 
+// Helper function to check if file is a text-based file that should show word count
+const isTextFile = (filePath: string): boolean => {
+  if (!filePath) return false;
+  const textExtensions = ['.md', '.txt', '.html', '.jsx', '.tsx', '.js', '.ts', '.css', '.json', '.xml', '.yaml', '.yml', '.py', '.java', '.cpp', '.c', '.go', '.rs', '.rb', '.php', '.sh', '.bash', '.sql', '.vue'];
+  const extension = filePath.toLowerCase().substring(filePath.lastIndexOf('.'));
+  return textExtensions.includes(extension);
+};
+
 const MainLayout: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -1276,7 +1284,7 @@ const MainLayout: React.FC = () => {
             )}
 
             {/* Stats (Desktop) */}
-            {currentNote && (
+            {currentNote && isTextFile(currentNote.filePath) && (
               <div className="flex items-center gap-4 text-xs font-medium text-zinc-500 dark:text-zinc-400 shrink-0 hidden sm:flex mr-2">
                 {currentNote.metadata?.date && (
                   <span>
