@@ -19,6 +19,7 @@ import { LoadingAnimation } from "./components/LoadingAnimation";
 import { FileTabContent } from "./components/FileTabContent";
 import { SortableTab } from "./components/SortableTab";
 import { Toast } from "./components/Toast";
+import { LicenseModal } from "./components/LicenseModal";
 import {
   DndContext,
   closestCenter,
@@ -339,6 +340,9 @@ const MainLayout: React.FC = () => {
 
   // --- Toast State ---
   const [toast, setToast] = useState<{ message: string; url?: string } | null>(null);
+
+  // --- License Modal State ---
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1025,7 +1029,10 @@ const MainLayout: React.FC = () => {
 
         <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between shrink-0 h-16">
           <div>
-            <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 tracking-tight">
+            <h1 
+              className="text-xl font-bold text-zinc-800 dark:text-zinc-100 tracking-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              onClick={() => setIsLicenseModalOpen(true)}
+            >
               {t('app.title')}
             </h1>
             {isLoading && (
@@ -1832,6 +1839,12 @@ const MainLayout: React.FC = () => {
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* License Modal */}
+      <LicenseModal 
+        isOpen={isLicenseModalOpen} 
+        onClose={() => setIsLicenseModalOpen(false)} 
+      />
     </div>
   );
 };
