@@ -42,7 +42,17 @@
     "errorPrefix": "Error: ",
     "selectFile": "Select File",
     "noOpenFiles": "No open files",
-    "linkCopied": "Link copied to clipboard!"
+    "linkCopied": "Link copied to clipboard!",
+    "about": "About FiaNotes",
+    "openSource": "Open Source Declaration",
+    "description": "FiaNotes is a modern, Markdown-centric note-taking application featuring a robust file explorer, auto-generated outlines, and code visualization. It supports AI assistance (Copilot), syntax highlighting, and seamless integration with GitHub for real-time note storage and retrieval.",
+    "author": "Author",
+    "license": "License",
+    "repository": "Repository",
+    "libraries": "Open Source Libraries",
+    "loadingLicenses": "Loading licenses...",
+    "loadLicenseError": "Failed to load license information",
+    "noLicenses": "No license information found"
   },
   "map": {
     "zoomIn": "Zoom In",

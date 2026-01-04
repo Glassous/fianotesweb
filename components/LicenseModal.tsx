@@ -73,7 +73,7 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose }) =
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
           <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-            {t('app.openSource', 'Open Source Declaration')}
+            {t('app.openSource')}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded">
             <svg className="w-5 h-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -87,23 +87,23 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose }) =
           {/* Project Info */}
           <div className="space-y-2">
              <div className="flex items-center gap-2">
-                <span className="font-bold text-xl">FiaNotes</span>
+                <span className="font-bold text-xl">{t('app.title')}</span>
              </div>
              <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                {t('app.description', 'A modern, Markdown-centric note-taking application featuring a robust file explorer, auto-generated outlines, and code visualization.')}
+                {t('app.description')}
              </p>
              
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mt-4">
                 <div>
-                    <span className="text-zinc-500 dark:text-zinc-500 block text-xs uppercase tracking-wider mb-1">{t('app.author', 'Author')}</span>
+                    <span className="text-zinc-500 dark:text-zinc-500 block text-xs uppercase tracking-wider mb-1">{t('app.author')}</span>
                     <span className="font-medium text-zinc-800 dark:text-zinc-200">Glassous</span>
                 </div>
                  <div>
-                    <span className="text-zinc-500 dark:text-zinc-500 block text-xs uppercase tracking-wider mb-1">{t('app.license', 'License')}</span>
+                    <span className="text-zinc-500 dark:text-zinc-500 block text-xs uppercase tracking-wider mb-1">{t('app.license')}</span>
                     <span className="font-medium text-zinc-800 dark:text-zinc-200">Apache 2.0</span>
                 </div>
                  <div className="col-span-1 sm:col-span-2">
-                    <span className="text-zinc-500 dark:text-zinc-500 block text-xs uppercase tracking-wider mb-1">{t('app.repository', 'Repository')}</span>
+                    <span className="text-zinc-500 dark:text-zinc-500 block text-xs uppercase tracking-wider mb-1">{t('app.repository')}</span>
                     <a href="https://github.com/Glassous/fianotesweb" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
                         https://github.com/Glassous/fianotesweb
                     </a>
@@ -116,13 +116,13 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose }) =
           {/* Open Source Libraries */}
           <div>
             <h3 className="text-md font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-                {t('app.libraries', 'Open Source Libraries')}
+                {t('app.libraries')}
             </h3>
             
             {loading ? (
                 <div className="text-center py-8 text-zinc-500 flex flex-col items-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-200 border-b-blue-500 mb-2"></div>
-                    {t('app.loadingLicenses', 'Loading licenses...')}
+                    {t('app.loadingLicenses')}
                 </div>
             ) : error ? (
                 <div className="text-center py-4 text-red-500 bg-red-50 dark:bg-red-900/20 rounded p-4 border border-red-100 dark:border-red-900/30">
@@ -160,7 +160,7 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose }) =
                     ))}
                     {licenses.length === 0 && (
                         <p className="text-zinc-500 text-sm italic text-center py-4">
-                            {t('app.noLicenses', 'No license information found.')}
+                            {t('app.noLicenses')}
                         </p>
                     )}
                 </div>

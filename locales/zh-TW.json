@@ -42,7 +42,17 @@
     "errorPrefix": "錯誤： ",
     "selectFile": "選擇檔案",
     "noOpenFiles": "無開啟檔案",
-    "linkCopied": "連結已複製到剪貼簿！"
+    "linkCopied": "連結已複製到剪貼簿！",
+    "about": "關於 FiaNotes",
+    "openSource": "開源聲明",
+    "description": "FiaNotes 是一個基於 Web 的自託管筆記平台，旨在為您提供美觀的 Markdown 筆記渲染體驗。它支持 AI 輔助（Copilot）、語法高亮，並能與 GitHub 無縫集成，實現實時筆記存儲與檢索。",
+    "author": "作者",
+    "license": "許可證",
+    "repository": "倉庫地址",
+    "libraries": "開源庫",
+    "loadingLicenses": "加載開源協議中...",
+    "loadLicenseError": "加載開源協議失敗",
+    "noLicenses": "未找到開源協議信息"
   },
   "map": {
     "zoomIn": "放大",
