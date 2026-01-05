@@ -88,14 +88,18 @@ export const JSXRenderer: React.FC<JSXRendererProps> = ({ code, isDark }) => {
             overflow-x: hidden;
           }
           
-          ::-webkit-scrollbar { width: 8px; height: 8px; }
+          ::-webkit-scrollbar { width: 14px; height: 14px; }
           ::-webkit-scrollbar-track { background: transparent; }
           ::-webkit-scrollbar-thumb {
-            background: ${isDark ? '#3f3f46' : '#d4d4d8'};
-            border-radius: 4px;
+            background-color: ${isDark ? '#3f3f46' : '#d4d4d8'};
+            border-radius: 9999px;
+            border: 5px solid transparent;
+            background-clip: content-box;
+            transition: background-color 0.3s ease;
           }
           ::-webkit-scrollbar-thumb:hover {
-            background: ${isDark ? '#52525b' : '#a1a1aa'};
+            background-color: ${isDark ? '#52525b' : '#a1a1aa'};
+            border-width: 3px;
           }
 
           #error-display {

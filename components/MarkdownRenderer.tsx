@@ -616,19 +616,42 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           color: #e4e4e7;
         }
 
-        .dark ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
+        .markdown-body ::-webkit-scrollbar {
+          width: 14px;
+          height: 14px;
+        }
+        .markdown-body ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .markdown-body ::-webkit-scrollbar-thumb {
+          background-color: rgba(161, 161, 170, 0.4);
+          border-radius: 9999px;
+          border: 5px solid transparent;
+          background-clip: content-box;
+          transition: background-color 0.3s ease;
+        }
+        .markdown-body ::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(113, 113, 122, 0.6);
+          border-width: 3px;
+        }
+
+        .dark .markdown-body ::-webkit-scrollbar {
+          width: 14px;
+          height: 14px;
         }
         .dark ::-webkit-scrollbar-track {
-          background: #18181b;
+          background: transparent;
         }
         .dark ::-webkit-scrollbar-thumb {
-          background: #3f3f46;
-          border-radius: 4px;
+          background-color: #3f3f46;
+          border-radius: 9999px;
+          border: 5px solid transparent;
+          background-clip: content-box;
+          transition: background-color 0.3s ease;
         }
         .dark ::-webkit-scrollbar-thumb:hover {
-          background: #52525b;
+          background-color: #52525b;
+          border-width: 2px;
         }
       `}</style>
 
