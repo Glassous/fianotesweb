@@ -142,17 +142,25 @@ const SidebarNode: React.FC<SidebarNodeProps> = ({
         </span>
       </div>
 
-      {node.type === "folder" &&
-        isOpen &&
-        (node as FolderItem).children.map((child) => (
-          <SidebarNode
-            key={child.id}
-            node={child}
-            onSelect={onSelect}
-            selectedId={selectedId}
-            depth={depth + 1}
-          />
-        ))}
+      {node.type === "folder" && (
+        <div
+          className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+            isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+        >
+          <div className="overflow-hidden">
+            {(node as FolderItem).children.map((child) => (
+              <SidebarNode
+                key={child.id}
+                node={child}
+                onSelect={onSelect}
+                selectedId={selectedId}
+                depth={depth + 1}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
