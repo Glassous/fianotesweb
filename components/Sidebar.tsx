@@ -192,32 +192,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Tabs */}
-      {showOutline && (
-        <div className="px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex-shrink-0">
-          <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
-            <button
-              onClick={() => onTabChange && onTabChange("files")}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
-                activeTab === "files"
-                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-              }`}
-            >
-              {t('sidebar.files')}
-            </button>
-            <button
-              onClick={() => onTabChange && onTabChange("outline")}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
-                activeTab === "outline"
-                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-              }`}
-            >
-              {t('sidebar.outline')}
-            </button>
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out flex-shrink-0 ${
+          showOutline ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex-shrink-0">
+            <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
+              <button
+                onClick={() => onTabChange && onTabChange("files")}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  activeTab === "files"
+                    ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                {t('sidebar.files')}
+              </button>
+              <button
+                onClick={() => onTabChange && onTabChange("outline")}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  activeTab === "outline"
+                    ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                {t('sidebar.outline')}
+              </button>
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Content */}
       <div className={`flex flex-col flex-1 min-h-0 ${activeTab === "files" ? "" : "hidden"}`}>
