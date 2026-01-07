@@ -18,6 +18,7 @@ interface FileTabContentProps {
   isDarkMode: boolean;
   onAskCopilot: (text: string) => void;
   markdownAlign?: "left" | "center";
+  typstScale?: number;
 }
 
 export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
@@ -30,6 +31,7 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
   isDarkMode,
   onAskCopilot,
   markdownAlign = "left",
+  typstScale = 1,
 }) => {
   // Stable click handler for this specific file tab
   // This ensures that switching tabs (changing activeFilePath) does not recreate this function
@@ -90,12 +92,14 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
                         isDark={isDarkMode}
                     />
                 </div>
-                ) : note.filePath.endsWith(".typ") && viewMode === "preview" ? (
+                ) : note.filePath.endsWith(".typ") ? (
                 <div className={`w-full flex-1 min-h-0 ${isResizing ? "pointer-events-none" : ""}`}>
                     <TypstRenderer
                         key={`${note.filePath}-${refreshKey}`}
                         code={note.content}
                         isDark={isDarkMode}
+                        viewMode={viewMode}
+                        scale={typstScale}
                     />
                 </div>
                 ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || (note.filePath.endsWith(".typ") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (

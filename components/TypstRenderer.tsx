@@ -4,6 +4,8 @@ import { LoadingAnimation } from './LoadingAnimation';
 interface TypstRendererProps {
   code: string;
   isDark?: boolean;
+  viewMode?: "preview" | "source";
+  scale?: number;
 }
 
 // Global typst instance
@@ -17,11 +19,25 @@ declare global {
   }
 }
 
-export const TypstRenderer: React.FC<TypstRendererProps> = ({ code, isDark }) => {
+export const TypstRenderer: React.FC<TypstRendererProps> = ({ 
+  code, 
+  isDark, 
+  viewMode = "preview",
+  scale = 1 
+}) => {
   const [svgContent, setSvgContent] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -131,7 +147,7 @@ export const TypstRenderer: React.FC<TypstRendererProps> = ({ code, isDark }) =>
   }, [code]);
 
   return (
-    <div className={`w-full h-full overflow-auto p-4 ${!loading && !error ? 'bg-white text-black' : ''}`}>
+    <div className={`w-full h-full overflow-auto p-4 ${!loading && !error && viewMode === 'preview' ? 'bg-white text-black' : ''}`}>
       {loading && (
         <div className="flex justify-center items-center h-full">
           <LoadingAnimation />
@@ -146,7 +162,13 @@ export const TypstRenderer: React.FC<TypstRendererProps> = ({ code, isDark }) =>
         </div>
       )}
 
-      {!loading && !error && (
+      {!loading && !error && viewMode === 'source' && (
+        <pre className="text-sm font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap bg-white dark:bg-zinc-900 p-4 rounded-lg border border-zinc-200 dark:border-zinc-800">
+          {code}
+        </pre>
+      )}
+
+      {!loading && !error && viewMode === 'preview' && (
         <div 
           ref={containerRef}
           className="typst-content flex justify-center"
@@ -154,6 +176,9 @@ export const TypstRenderer: React.FC<TypstRendererProps> = ({ code, isDark }) =>
             width: '100%',
             height: 'auto',
             isolation: 'isolate',
+            transform: `scale(${isMobile ? scale * 0.7 : scale})`,
+            transformOrigin: 'top center',
+            transition: 'transform 0.2s ease-out',
           }}
         >
           <div dangerouslySetInnerHTML={{ __html: svgContent }} />

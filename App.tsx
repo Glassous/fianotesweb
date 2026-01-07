@@ -290,6 +290,38 @@ const StatsIcon = () => (
   </svg>
 );
 
+const ZoomInIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
+    />
+  </svg>
+);
+
+const ZoomOutIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"
+    />
+  </svg>
+);
+
 type ThemeMode = "system" | "light" | "dark";
 
 interface RecentFile {
@@ -408,6 +440,14 @@ const MainLayout: React.FC = () => {
     }
   };
 
+  const handleTypstZoomIn = () => {
+    setTypstScale(prev => Math.min(prev + 0.1, 3));
+  };
+
+  const handleTypstZoomOut = () => {
+    setTypstScale(prev => Math.max(prev - 0.1, 0.5));
+  };
+
 
   // --- Resize State (Desktop Only) ---
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -505,6 +545,9 @@ const MainLayout: React.FC = () => {
   // View Mode State (for HTML files)
   const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Typst Scale State
+  const [typstScale, setTypstScale] = useState(1);
 
   // --- Tab Bar Logic ---
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -874,6 +917,8 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     // Reset view mode to preview when file changes
     setViewMode("preview");
+    // Reset typst scale when file changes
+    setTypstScale(1);
   }, [activeFilePath]);
 
   // Note stats calculation
@@ -1280,9 +1325,9 @@ const MainLayout: React.FC = () => {
            </div>
 
           <div className="flex items-center gap-2 shrink-0 mb-1.5">
-            {/* HTML/JSX/Vue Preview Toggle */}
-            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue")) && (
-              <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
+            {/* HTML/JSX/Vue/Typst Preview Toggle (Desktop Only) */}
+            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ")) && (
+              <div className="hidden md:flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
                 <button
                   onClick={() => setViewMode("preview")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
@@ -1397,6 +1442,31 @@ const MainLayout: React.FC = () => {
 
             {/* Desktop Toolbar */}
             <div className="hidden md:flex items-center gap-1">
+              {/* Typst Zoom Controls */}
+              {currentNote?.filePath.endsWith(".typ") && viewMode === "preview" && (
+                <>
+                  <button
+                    onClick={handleTypstZoomOut}
+                    disabled={typstScale <= 0.5}
+                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={t('map.zoomOut')}
+                  >
+                    <ZoomOutIcon />
+                  </button>
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 min-w-[3rem] text-center">
+                    {Math.round(typstScale * 100)}%
+                  </span>
+                  <button
+                    onClick={handleTypstZoomIn}
+                    disabled={typstScale >= 3}
+                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={t('map.zoomIn')}
+                  >
+                    <ZoomInIcon />
+                  </button>
+                </>
+              )}
+              
               {/* Refresh Button for HTML/JSX/Vue Preview */}
               {(currentNote?.filePath.endsWith(".html") || currentNote?.filePath.endsWith(".jsx") || currentNote?.filePath.endsWith(".vue")) && viewMode === "preview" && (
                 <button
@@ -1540,6 +1610,63 @@ const MainLayout: React.FC = () => {
                             <div className="relative">
                                 {/* Main Menu */}
                                 <div className={`w-full transition-transform duration-300 ease-in-out ${mobileMenuLevel === 'main' ? 'translate-x-0' : '-translate-x-full absolute top-0'}`}>
+                                  {/* Preview/Source Toggle (Mobile) */}
+                                  {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ")) && (
+                                    <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-700">
+                                      <div className="flex items-center bg-zinc-100 dark:bg-zinc-700 rounded-lg p-1">
+                                        <button
+                                          onClick={() => setViewMode("preview")}
+                                          className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                            viewMode === "preview"
+                                              ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                                              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                                          }`}
+                                        >
+                                          {t('app.preview')}
+                                        </button>
+                                        <button
+                                          onClick={() => setViewMode("source")}
+                                          className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                            viewMode === "source"
+                                              ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                                              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                                          }`}
+                                        >
+                                          {t('app.source')}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Typst Zoom Controls (Mobile) */}
+                                  {currentNote?.filePath.endsWith(".typ") && viewMode === "preview" && (
+                                    <>
+                                      <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-700">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <button
+                                            onClick={handleTypstZoomOut}
+                                            disabled={typstScale <= 0.5}
+                                            className="w-10 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                            aria-label={t('map.zoomOut')}
+                                          >
+                                            <ZoomOutIcon />
+                                          </button>
+                                          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[3.5rem] text-center">
+                                            {Math.round(typstScale * 100)}%
+                                          </span>
+                                          <button
+                                            onClick={handleTypstZoomIn}
+                                            disabled={typstScale >= 3}
+                                            className="w-10 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                            aria-label={t('map.zoomIn')}
+                                          >
+                                            <ZoomInIcon />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </>
+                                  )}
+                                  
                                   {/* Share & Download */}
                                   {currentNote && (
                                       <>
@@ -1798,6 +1925,7 @@ const MainLayout: React.FC = () => {
                         isDarkMode={isDarkMode}
                         onAskCopilot={handleAskCopilot}
                         markdownAlign={markdownAlign}
+                        typstScale={typstScale}
                     />
                 );
             })
