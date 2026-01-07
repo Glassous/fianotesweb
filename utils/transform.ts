@@ -140,6 +140,7 @@ export const getLanguageFromExtension = (filePath: string): string | null => {
     case "bat": case "cmd": return "batch";
     case "ps1": return "powershell";
     case "vue": return "xml";
+    case "typ": return "typst";
     default: return null;
   }
 };

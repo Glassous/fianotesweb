@@ -35,6 +35,17 @@ import {
   SiVuedotjs,
 } from "react-icons/si";
 
+const TypstIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M23.99 4.384v5.353c0 .322-.26.584-.582.584h-4.326c-.322 0-.583-.262-.583-.584V4.384H12.984v14.65h5.515c.32 0 .582.26.582.583v4.383c0 .322-.262.583-.582.583H5.5c-.322 0-.583-.26-.583-.583v-4.383c0-.322.26-.583.583-.583h5.515V4.384H5.499v5.353c0 .322-.26.584-.583.584H.583C.262 10.321 0 10.06 0 9.737V4.384C0 2.22 1.942.27 4.106.27h15.778c2.164 0 4.106 1.95 4.106 4.114z"/>
+  </svg>
+);
+
 interface IconProps {
   className?: string;
 }
@@ -77,6 +88,8 @@ export const getFileIcon = (fileName: string, className?: string) => {
       return <VscCode className={`${cls} text-orange-400`} />;
     case "vue":
       return <SiVuedotjs className={`${cls} text-green-500`} />;
+    case "typ":
+      return <VscCode className={`${cls} text-teal-600`} />;
     
     // Markdown
     case "md":

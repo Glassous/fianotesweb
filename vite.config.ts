@@ -26,6 +26,12 @@ export default defineConfig(({ mode }) => {
       'process.env.NOTES_PAT': JSON.stringify(env.NOTES_PAT),
       'process.env.VITE_ENABLE_AI_PASSWORD': JSON.stringify(env.VITE_ENABLE_AI_PASSWORD),
       'process.env.VITE_ENABLE_HASH_PASSWORD': JSON.stringify(env.VITE_ENABLE_HASH_PASSWORD),
-    }
+    },
+    optimizeDeps: {
+      exclude: ['@myriaddreamin/typst.ts', '@myriaddreamin/typst-ts-renderer', '@myriaddreamin/typst-ts-web-compiler'],
+    },
+    worker: {
+      format: 'es',
+    },
   }
 })

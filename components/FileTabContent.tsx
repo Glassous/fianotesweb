@@ -4,6 +4,7 @@ import { CodeViewer } from "./CodeViewer";
 import { JSXRenderer } from "./JSXRenderer";
 import { VueRenderer } from "./VueRenderer";
 import { PDFViewer } from "./PDFViewer";
+import { TypstRenderer } from "./TypstRenderer";
 import { getLanguageFromExtension } from "../utils/transform";
 import { RawNoteFile } from "../types";
 
@@ -89,10 +90,18 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
                         isDark={isDarkMode}
                     />
                 </div>
-                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
+                ) : note.filePath.endsWith(".typ") && viewMode === "preview" ? (
+                <div className={`w-full flex-1 min-h-0 ${isResizing ? "pointer-events-none" : ""}`}>
+                    <TypstRenderer
+                        key={`${note.filePath}-${refreshKey}`}
+                        code={note.content}
+                        isDark={isDarkMode}
+                    />
+                </div>
+                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || (note.filePath.endsWith(".typ") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
                 <CodeViewer 
                     content={note.content} 
-                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : note.filePath.endsWith(".vue") ? "xml" : getLanguageFromExtension(note.filePath)!} 
+                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : note.filePath.endsWith(".vue") ? "xml" : note.filePath.endsWith(".typ") ? "typst" : getLanguageFromExtension(note.filePath)!} 
                     isDark={isDarkMode}
                 />
                 ) : (
