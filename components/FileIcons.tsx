@@ -37,12 +37,15 @@ import {
 
 const TypstIcon = ({ className }: { className?: string }) => (
   <svg
+    xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     className={className}
-    fill="currentColor"
-    xmlns="http://www.w3.org/2000/svg"
+    fill="#239dad"
   >
-    <path d="M23.99 4.384v5.353c0 .322-.26.584-.582.584h-4.326c-.322 0-.583-.262-.583-.584V4.384H12.984v14.65h5.515c.32 0 .582.26.582.583v4.383c0 .322-.262.583-.582.583H5.5c-.322 0-.583-.26-.583-.583v-4.383c0-.322.26-.583.583-.583h5.515V4.384H5.499v5.353c0 .322-.26.584-.583.584H.583C.262 10.321 0 10.06 0 9.737V4.384C0 2.22 1.942.27 4.106.27h15.778c2.164 0 4.106 1.95 4.106 4.114z"/>
+    <path
+      fill="#239dad"
+      d="M12.654 17.846q0 1.67.479 2.242q.48.572 1.743.572q1.308 0 3.356-1.319l.871 1.45q-3.835 3.21-6.318 3.209q-2.485 0-3.922-1.187q-1.438-1.23-1.438-4.307V6.989H5.246l-.349-1.626l2.528-.791V2.418L12.654 0v4.835l5.142-.395l-.48 2.857l-4.662-.176z"
+    />
   </svg>
 );
 
@@ -89,7 +92,7 @@ export const getFileIcon = (fileName: string, className?: string) => {
     case "vue":
       return <SiVuedotjs className={`${cls} text-green-500`} />;
     case "typ":
-      return <VscCode className={`${cls} text-teal-600`} />;
+      return <TypstIcon className={cls} />;
     
     // Markdown
     case "md":
