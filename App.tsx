@@ -478,6 +478,26 @@ const MainLayout: React.FC = () => {
     });
   };
 
+  const handleImageZoomIn = () => {
+    setImageScale(prev => {
+      const next = Math.min(prev + 0.1, 5); // Allow higher zoom for images
+      if (activeFilePath && /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(activeFilePath)) {
+        imageScalesRef.current[activeFilePath] = next;
+      }
+      return next;
+    });
+  };
+
+  const handleImageZoomOut = () => {
+    setImageScale(prev => {
+      const next = Math.max(prev - 0.1, 0.1); // Allow smaller zoom for images
+      if (activeFilePath && /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(activeFilePath)) {
+        imageScalesRef.current[activeFilePath] = next;
+      }
+      return next;
+    });
+  };
+
 
   // --- Resize State (Desktop Only) ---
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -579,10 +599,12 @@ const MainLayout: React.FC = () => {
   // Typst Scale State
   const [typstScale, setTypstScale] = useState(1);
   const [markdownScale, setMarkdownScale] = useState(1);
+  const [imageScale, setImageScale] = useState(1);
 
   // Temporary Scale Storage (Session only)
   const typstScalesRef = useRef<Record<string, number>>({});
   const markdownScalesRef = useRef<Record<string, number>>({});
+  const imageScalesRef = useRef<Record<string, number>>({});
 
   const [isZoomMenuOpen, setIsZoomMenuOpen] = useState(false);
   const zoomMenuRef = useRef<HTMLDivElement>(null);
@@ -925,6 +947,22 @@ const MainLayout: React.FC = () => {
             console.error("Failed to load PDF content", err);
           })
           .finally(() => setContentLoading(false));
+      } else if (/\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(note.filePath)) {
+          fetchBlobContent(note.blobUrl)
+          .then((blob) => {
+             const url = URL.createObjectURL(blob);
+             setNotesData((prev) =>
+              prev.map((n) =>
+                n.filePath === activeFilePath
+                  ? { ...n, content: url }
+                  : n,
+              ),
+            );
+          })
+         .catch((err) => {
+           console.error("Failed to load Image content", err);
+         })
+         .finally(() => setContentLoading(false));
       } else {
         fetchNoteContent(note.blobUrl)
           .then((content) => {
@@ -964,6 +1002,10 @@ const MainLayout: React.FC = () => {
     if (activeFilePath && activeFilePath.endsWith(".md")) {
       const saved = markdownScalesRef.current[activeFilePath];
       setMarkdownScale(saved ?? 1);
+    }
+    if (activeFilePath && /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(activeFilePath)) {
+      const saved = imageScalesRef.current[activeFilePath];
+      setImageScale(saved ?? 1);
     }
   }, [activeFilePath]);
   // Note stats calculation
@@ -1371,20 +1413,25 @@ const MainLayout: React.FC = () => {
 
           <div className="flex items-center gap-2 shrink-0 mb-1.5">
             {/* Zoom Controls (Moved) */}
-            {(currentNote?.filePath.endsWith(".typ") || (currentNote?.filePath.endsWith(".md") && viewMode === "preview")) && (() => {
-               const isTypst = currentNote.filePath.endsWith(".typ");
-               const scale = isTypst ? typstScale : markdownScale;
+            {(currentNote?.filePath.endsWith(".typ") || (currentNote?.filePath.endsWith(".md") && viewMode === "preview") || /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(currentNote?.filePath || "")) && (() => {
+               const isTypst = currentNote?.filePath.endsWith(".typ");
+               const isImage = /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(currentNote?.filePath || "");
+               const scale = isTypst ? typstScale : (isImage ? imageScale : markdownScale);
+               
                const setScale = (s: number) => {
                    if (isTypst) {
                        setTypstScale(s);
                        if (activeFilePath) typstScalesRef.current[activeFilePath] = s;
+                   } else if (isImage) {
+                       setImageScale(s);
+                       if (activeFilePath) imageScalesRef.current[activeFilePath] = s;
                    } else {
                        setMarkdownScale(s);
                        if (activeFilePath) markdownScalesRef.current[activeFilePath] = s;
                    }
                };
-               const handleZoomOut = isTypst ? handleTypstZoomOut : handleMarkdownZoomOut;
-               const handleZoomIn = isTypst ? handleTypstZoomIn : handleMarkdownZoomIn;
+               const handleZoomOut = isTypst ? handleTypstZoomOut : (isImage ? handleImageZoomOut : handleMarkdownZoomOut);
+               const handleZoomIn = isTypst ? handleTypstZoomIn : (isImage ? handleImageZoomIn : handleMarkdownZoomIn);
 
                return (
                    <div className="hidden md:flex items-center gap-0.5 mr-2 relative" ref={zoomMenuRef}>
@@ -2041,6 +2088,8 @@ const MainLayout: React.FC = () => {
                         markdownAlign={markdownAlign}
                         typstScale={typstScale}
                         markdownScale={markdownScale}
+                        imageScale={imageScale}
+                        onImageZoomChange={setImageScale}
                     />
                 );
             })

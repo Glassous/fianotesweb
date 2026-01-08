@@ -92,7 +92,8 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
     ".kt", ".kts", ".php", ".rb", ".cs",
     ".swift", ".lua", ".r", ".dart",
     ".bat", ".cmd", ".ps1", ".vue", ".pdf",
-    ".typ"
+    ".typ",
+    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"
   ];
   
   return treeData.tree.filter((item: GitHubTreeItem) => 

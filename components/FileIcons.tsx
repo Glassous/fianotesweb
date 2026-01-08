@@ -154,6 +154,7 @@ export const getFileIcon = (fileName: string, className?: string) => {
     case "gif":
     case "svg":
     case "ico":
+    case "webp":
       return <VscFileMedia className={`${cls} text-purple-400`} />;
 
     // Documents

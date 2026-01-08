@@ -4,6 +4,7 @@ import { CodeViewer } from "./CodeViewer";
 import { JSXRenderer } from "./JSXRenderer";
 import { VueRenderer } from "./VueRenderer";
 import { PDFViewer } from "./PDFViewer";
+import { ImageViewer } from "./ImageViewer";
 import { TypstRenderer } from "./TypstRenderer";
 import { getLanguageFromExtension } from "../utils/transform";
 import { RawNoteFile } from "../types";
@@ -20,6 +21,8 @@ interface FileTabContentProps {
   markdownAlign?: "left" | "center";
   typstScale?: number;
   markdownScale?: number;
+  imageScale?: number;
+  onImageZoomChange?: (scale: number) => void;
 }
 
 export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
@@ -34,6 +37,8 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
   markdownAlign = "left",
   typstScale = 1,
   markdownScale = 1,
+  imageScale = 1,
+  onImageZoomChange,
 }) => {
   // Stable click handler for this specific file tab
   // This ensures that switching tabs (changing activeFilePath) does not recreate this function
@@ -92,6 +97,15 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
                     <PDFViewer
                         file={note.content}
                         isDark={isDarkMode}
+                    />
+                </div>
+                ) : /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(note.filePath) ? (
+                <div className={`w-full h-full bg-white dark:bg-zinc-900 ${isResizing ? "pointer-events-none" : ""}`}>
+                    <ImageViewer
+                        content={note.content}
+                        fileName={note.filePath.split('/').pop() || ''}
+                        scale={imageScale}
+                        onZoomChange={onImageZoomChange}
                     />
                 </div>
                 ) : note.filePath.endsWith(".typ") ? (
