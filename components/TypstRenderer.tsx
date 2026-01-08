@@ -29,6 +29,8 @@ export const TypstRenderer: React.FC<TypstRendererProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState<number>(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -38,6 +40,24 @@ export const TypstRenderer: React.FC<TypstRendererProps> = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContentHeight(entry.contentRect.height);
+      }
+    });
+
+    resizeObserver.observe(contentRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [svgContent]); // Re-observe when content changes
+
+  const effectiveScale = isMobile ? scale * 0.7 : scale;
 
   useEffect(() => {
     let mounted = true;
@@ -147,7 +167,7 @@ export const TypstRenderer: React.FC<TypstRendererProps> = ({
   }, [code]);
 
   return (
-    <div className={`w-full h-full overflow-auto p-4 ${!loading && !error && viewMode === 'preview' ? 'bg-white text-black' : ''}`}>
+    <div className={`w-full min-h-full p-4 ${!loading && !error && viewMode === 'preview' ? 'bg-white text-black' : ''}`}>
       {loading && (
         <div className="flex justify-center items-center h-full">
           <LoadingAnimation />
@@ -171,17 +191,26 @@ export const TypstRenderer: React.FC<TypstRendererProps> = ({
       {!loading && !error && viewMode === 'preview' && (
         <div 
           ref={containerRef}
-          className="typst-content flex justify-center"
+          className={`typst-content flex justify-center ${contentHeight > 0 ? 'overflow-hidden' : ''}`}
           style={{
-            width: '100%',
-            height: 'auto',
-            isolation: 'isolate',
-            transform: `scale(${isMobile ? scale * 0.7 : scale})`,
-            transformOrigin: 'top center',
-            transition: 'transform 0.2s ease-out',
+             height: contentHeight > 0 ? contentHeight * effectiveScale : 'auto',
+             transition: 'height 0.2s ease-out',
           }}
         >
-          <div dangerouslySetInnerHTML={{ __html: svgContent }} />
+          <div 
+            ref={contentRef}
+            className="flex justify-center"
+            style={{
+                width: '100%',
+                height: 'auto',
+                isolation: 'isolate',
+                transform: `scale(${effectiveScale})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.2s ease-out',
+            }}
+          >
+             <div dangerouslySetInnerHTML={{ __html: svgContent }} />
+          </div>
         </div>
       )}
     </div>

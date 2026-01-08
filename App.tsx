@@ -997,7 +997,7 @@ const MainLayout: React.FC = () => {
     setViewMode("preview");
     if (activeFilePath && activeFilePath.endsWith(".typ")) {
       const saved = typstScalesRef.current[activeFilePath];
-      setTypstScale(saved ?? 1);
+      setTypstScale(saved ?? 1.5);
     }
     if (activeFilePath && activeFilePath.endsWith(".md")) {
       const saved = markdownScalesRef.current[activeFilePath];
