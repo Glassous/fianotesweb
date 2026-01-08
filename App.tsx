@@ -441,11 +441,41 @@ const MainLayout: React.FC = () => {
   };
 
   const handleTypstZoomIn = () => {
-    setTypstScale(prev => Math.min(prev + 0.1, 3));
+    setTypstScale(prev => {
+      const next = Math.min(prev + 0.1, 3);
+      if (activeFilePath && activeFilePath.endsWith(".typ")) {
+        typstScalesRef.current[activeFilePath] = next;
+      }
+      return next;
+    });
   };
 
   const handleTypstZoomOut = () => {
-    setTypstScale(prev => Math.max(prev - 0.1, 0.5));
+    setTypstScale(prev => {
+      const next = Math.max(prev - 0.1, 0.5);
+      if (activeFilePath && activeFilePath.endsWith(".typ")) {
+        typstScalesRef.current[activeFilePath] = next;
+      }
+      return next;
+    });
+  };
+  const handleMarkdownZoomIn = () => {
+    setMarkdownScale(prev => {
+      const next = Math.min(prev + 0.1, 3);
+      if (activeFilePath && activeFilePath.endsWith(".md")) {
+        markdownScalesRef.current[activeFilePath] = next;
+      }
+      return next;
+    });
+  };
+  const handleMarkdownZoomOut = () => {
+    setMarkdownScale(prev => {
+      const next = Math.max(prev - 0.1, 0.5);
+      if (activeFilePath && activeFilePath.endsWith(".md")) {
+        markdownScalesRef.current[activeFilePath] = next;
+      }
+      return next;
+    });
   };
 
 
@@ -548,6 +578,11 @@ const MainLayout: React.FC = () => {
   
   // Typst Scale State
   const [typstScale, setTypstScale] = useState(1);
+  const [markdownScale, setMarkdownScale] = useState(1);
+
+  // Temporary Scale Storage (Session only)
+  const typstScalesRef = useRef<Record<string, number>>({});
+  const markdownScalesRef = useRef<Record<string, number>>({});
 
   // --- Tab Bar Logic ---
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -913,14 +948,18 @@ const MainLayout: React.FC = () => {
       ));
   };
 
-  // Effect: Reset view mode to preview when file changes
   useEffect(() => {
     // Reset view mode to preview when file changes
     setViewMode("preview");
-    // Reset typst scale when file changes
-    setTypstScale(1);
+    if (activeFilePath && activeFilePath.endsWith(".typ")) {
+      const saved = typstScalesRef.current[activeFilePath];
+      setTypstScale(saved ?? 1);
+    }
+    if (activeFilePath && activeFilePath.endsWith(".md")) {
+      const saved = markdownScalesRef.current[activeFilePath];
+      setMarkdownScale(saved ?? 1);
+    }
   }, [activeFilePath]);
-
   // Note stats calculation
   const noteStats = useMemo(() => {
     if (!currentNote?.content) return { characters: 0, words: 0, lines: 0, readTime: 0 };
@@ -1325,8 +1364,8 @@ const MainLayout: React.FC = () => {
            </div>
 
           <div className="flex items-center gap-2 shrink-0 mb-1.5">
-            {/* HTML/JSX/Vue/Typst Preview Toggle (Desktop Only) */}
-            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ")) && (
+            {/* HTML/JSX/Vue/Typst/Markdown Preview Toggle (Desktop Only) */}
+            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ") || currentNote.filePath.endsWith(".md")) && (
               <div className="hidden md:flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
                 <button
                   onClick={() => setViewMode("preview")}
@@ -1459,6 +1498,30 @@ const MainLayout: React.FC = () => {
                   <button
                     onClick={handleTypstZoomIn}
                     disabled={typstScale >= 3}
+                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={t('map.zoomIn')}
+                  >
+                    <ZoomInIcon />
+                  </button>
+                </>
+              )}
+              {/* Markdown Zoom Controls */}
+              {currentNote?.filePath.endsWith(".md") && viewMode === "preview" && (
+                <>
+                  <button
+                    onClick={handleMarkdownZoomOut}
+                    disabled={markdownScale <= 0.5}
+                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={t('map.zoomOut')}
+                  >
+                    <ZoomOutIcon />
+                  </button>
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 min-w-[3rem] text-center">
+                    {Math.round(markdownScale * 100)}%
+                  </span>
+                  <button
+                    onClick={handleMarkdownZoomIn}
+                    disabled={markdownScale >= 3}
                     className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
                     title={t('map.zoomIn')}
                   >
@@ -1611,7 +1674,7 @@ const MainLayout: React.FC = () => {
                                 {/* Main Menu */}
                                 <div className={`w-full transition-transform duration-300 ease-in-out ${mobileMenuLevel === 'main' ? 'translate-x-0' : '-translate-x-full absolute top-0'}`}>
                                   {/* Preview/Source Toggle (Mobile) */}
-                                  {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ")) && (
+                                  {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ") || currentNote.filePath.endsWith(".md")) && (
                                     <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-700">
                                       <div className="flex items-center bg-zinc-100 dark:bg-zinc-700 rounded-lg p-1">
                                         <button
@@ -1657,6 +1720,34 @@ const MainLayout: React.FC = () => {
                                           <button
                                             onClick={handleTypstZoomIn}
                                             disabled={typstScale >= 3}
+                                            className="w-10 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                            aria-label={t('map.zoomIn')}
+                                          >
+                                            <ZoomInIcon />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </>
+                                  )}
+                                  {/* Markdown Zoom Controls (Mobile) */}
+                                  {currentNote?.filePath.endsWith(".md") && viewMode === "preview" && (
+                                    <>
+                                      <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-700">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <button
+                                            onClick={handleMarkdownZoomOut}
+                                            disabled={markdownScale <= 0.5}
+                                            className="w-10 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                            aria-label={t('map.zoomOut')}
+                                          >
+                                            <ZoomOutIcon />
+                                          </button>
+                                          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[3.5rem] text-center">
+                                            {Math.round(markdownScale * 100)}%
+                                          </span>
+                                          <button
+                                            onClick={handleMarkdownZoomIn}
+                                            disabled={markdownScale >= 3}
                                             className="w-10 h-10 flex items-center justify-center bg-zinc-100 dark:bg-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                             aria-label={t('map.zoomIn')}
                                           >
@@ -1926,6 +2017,7 @@ const MainLayout: React.FC = () => {
                         onAskCopilot={handleAskCopilot}
                         markdownAlign={markdownAlign}
                         typstScale={typstScale}
+                        markdownScale={markdownScale}
                     />
                 );
             })

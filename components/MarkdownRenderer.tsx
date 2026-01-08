@@ -20,6 +20,7 @@ interface MarkdownRendererProps {
   onSelectionAction?: (text: string) => void;
   onInternalLinkClick?: (id: string) => void;
   align?: "left" | "center";
+  scale?: number;
 }
 
 // --- Icons ---
@@ -383,6 +384,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   onSelectionAction,
   onInternalLinkClick,
   align = "left",
+  scale = 1,
 }) => {
   const { t } = useTranslation();
   const containerClasses = variant === "document"
@@ -394,6 +396,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     : ""; 
 
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -559,6 +567,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           background-color: transparent !important;
           font-family: inherit;
           min-height: auto !important;
+          overflow-x: clip;
+          overflow-y: visible !important;
         }
         
         .markdown-body pre {
@@ -655,7 +665,18 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         }
       `}</style>
 
-      <div className={contentWrapperClasses}>
+      <div
+        className={contentWrapperClasses}
+        style={{
+          isolation: 'isolate',
+          transform: `scale(${isMobile ? Math.max(0.5, scale * 0.7) : scale})`,
+          transformOrigin: align === "center" ? 'top center' : 'top left',
+          transition: 'transform 0.2s ease-out',
+          width: `calc(100% / ${isMobile ? Math.max(0.5, scale * 0.7) : scale})`,
+          maxWidth: '100%',
+          willChange: 'transform',
+        }}
+      >
         {parts.map((part, index) => {
           if (part.startsWith("<think>")) {
             let inner = part.replace("<think>", "");

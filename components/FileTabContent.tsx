@@ -19,6 +19,7 @@ interface FileTabContentProps {
   onAskCopilot: (text: string) => void;
   markdownAlign?: "left" | "center";
   typstScale?: number;
+  markdownScale?: number;
 }
 
 export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
@@ -32,6 +33,7 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
   onAskCopilot,
   markdownAlign = "left",
   typstScale = 1,
+  markdownScale = 1,
 }) => {
   // Stable click handler for this specific file tab
   // This ensures that switching tabs (changing activeFilePath) does not recreate this function
@@ -102,20 +104,23 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
                         scale={typstScale}
                     />
                 </div>
-                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || (note.filePath.endsWith(".typ") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
+                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || (note.filePath.endsWith(".typ") && viewMode === "source") || (note.filePath.endsWith(".md") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
                 <CodeViewer 
                     content={note.content} 
-                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : note.filePath.endsWith(".vue") ? "xml" : note.filePath.endsWith(".typ") ? "typst" : getLanguageFromExtension(note.filePath)!} 
+                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : note.filePath.endsWith(".vue") ? "xml" : note.filePath.endsWith(".typ") ? "typst" : note.filePath.endsWith(".md") ? "markdown" : getLanguageFromExtension(note.filePath)!} 
                     isDark={isDarkMode}
                 />
                 ) : (
-                <MarkdownRenderer 
-                    content={note.content} 
-                    isDark={isDarkMode} 
-                    onSelectionAction={onAskCopilot}
-                    onInternalLinkClick={handleHeadingClick}
-                    align={markdownAlign}
-                />
+                <div className={`w-full flex-1 min-h-0 ${isResizing ? "pointer-events-none" : ""}`}>
+                    <MarkdownRenderer 
+                        content={note.content} 
+                        isDark={isDarkMode} 
+                        onSelectionAction={onAskCopilot}
+                        onInternalLinkClick={handleHeadingClick}
+                        align={markdownAlign}
+                        scale={markdownScale}
+                    />
+                </div>
                 )}
             </div>
             </div>
