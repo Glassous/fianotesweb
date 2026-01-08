@@ -673,7 +673,6 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           transformOrigin: align === "center" ? 'top center' : 'top left',
           transition: 'transform 0.2s ease-out',
           width: `calc(100% / ${isMobile ? Math.max(0.5, scale * 0.7) : scale})`,
-          maxWidth: '100%',
           willChange: 'transform',
         }}
       >

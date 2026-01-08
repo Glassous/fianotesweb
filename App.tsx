@@ -584,6 +584,9 @@ const MainLayout: React.FC = () => {
   const typstScalesRef = useRef<Record<string, number>>({});
   const markdownScalesRef = useRef<Record<string, number>>({});
 
+  const [isZoomMenuOpen, setIsZoomMenuOpen] = useState(false);
+  const zoomMenuRef = useRef<HTMLDivElement>(null);
+
   // --- Tab Bar Logic ---
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [tabsContainerWidth, setTabsContainerWidth] = useState(0);
@@ -605,6 +608,9 @@ const MainLayout: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (overflowMenuRef.current && !overflowMenuRef.current.contains(event.target as Node)) {
         setIsOverflowMenuOpen(false);
+      }
+      if (zoomMenuRef.current && !zoomMenuRef.current.contains(event.target as Node)) {
+        setIsZoomMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -1364,6 +1370,70 @@ const MainLayout: React.FC = () => {
            </div>
 
           <div className="flex items-center gap-2 shrink-0 mb-1.5">
+            {/* Zoom Controls (Moved) */}
+            {(currentNote?.filePath.endsWith(".typ") || (currentNote?.filePath.endsWith(".md") && viewMode === "preview")) && (() => {
+               const isTypst = currentNote.filePath.endsWith(".typ");
+               const scale = isTypst ? typstScale : markdownScale;
+               const setScale = (s: number) => {
+                   if (isTypst) {
+                       setTypstScale(s);
+                       if (activeFilePath) typstScalesRef.current[activeFilePath] = s;
+                   } else {
+                       setMarkdownScale(s);
+                       if (activeFilePath) markdownScalesRef.current[activeFilePath] = s;
+                   }
+               };
+               const handleZoomOut = isTypst ? handleTypstZoomOut : handleMarkdownZoomOut;
+               const handleZoomIn = isTypst ? handleTypstZoomIn : handleMarkdownZoomIn;
+
+               return (
+                   <div className="hidden md:flex items-center gap-0.5 mr-2 relative" ref={zoomMenuRef}>
+                      <button
+                        onClick={handleZoomOut}
+                        disabled={scale <= 0.5}
+                        className="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={t('map.zoomOut')}
+                      >
+                        <ZoomOutIcon />
+                      </button>
+                      
+                      <div className="relative">
+                          <button 
+                            onClick={() => setIsZoomMenuOpen(!isZoomMenuOpen)}
+                            className="text-xs font-medium text-zinc-500 dark:text-zinc-400 min-w-[3rem] text-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded py-1.5 px-1 transition-colors select-none"
+                          >
+                            {Math.round(scale * 100)}%
+                          </button>
+                          
+                          {/* Zoom Menu */}
+                          <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 w-20 bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 p-1 transform transition-all duration-200 ease-out z-50 ${isZoomMenuOpen ? "opacity-100 scale-100 translate-y-0 visible" : "opacity-0 scale-95 -translate-y-2 invisible pointer-events-none"}`}>
+                             {[0.5, 0.75, 1, 1.25, 1.5, 2, 3].map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => {
+                                        setScale(s);
+                                        setIsZoomMenuOpen(false);
+                                    }}
+                                    className={`block w-full text-center px-2 py-1.5 text-xs rounded-md ${scale === s ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'}`}
+                                >
+                                    {s * 100}%
+                                </button>
+                             ))}
+                          </div>
+                      </div>
+
+                      <button
+                        onClick={handleZoomIn}
+                        disabled={scale >= 3}
+                        className="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={t('map.zoomIn')}
+                      >
+                        <ZoomInIcon />
+                      </button>
+                   </div>
+               );
+            })()}
+
             {/* HTML/JSX/Vue/Typst/Markdown Preview Toggle (Desktop Only) */}
             {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ") || currentNote.filePath.endsWith(".md")) && (
               <div className="hidden md:flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
@@ -1481,54 +1551,7 @@ const MainLayout: React.FC = () => {
 
             {/* Desktop Toolbar */}
             <div className="hidden md:flex items-center gap-1">
-              {/* Typst Zoom Controls */}
-              {currentNote?.filePath.endsWith(".typ") && viewMode === "preview" && (
-                <>
-                  <button
-                    onClick={handleTypstZoomOut}
-                    disabled={typstScale <= 0.5}
-                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
-                    title={t('map.zoomOut')}
-                  >
-                    <ZoomOutIcon />
-                  </button>
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 min-w-[3rem] text-center">
-                    {Math.round(typstScale * 100)}%
-                  </span>
-                  <button
-                    onClick={handleTypstZoomIn}
-                    disabled={typstScale >= 3}
-                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
-                    title={t('map.zoomIn')}
-                  >
-                    <ZoomInIcon />
-                  </button>
-                </>
-              )}
-              {/* Markdown Zoom Controls */}
-              {currentNote?.filePath.endsWith(".md") && viewMode === "preview" && (
-                <>
-                  <button
-                    onClick={handleMarkdownZoomOut}
-                    disabled={markdownScale <= 0.5}
-                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
-                    title={t('map.zoomOut')}
-                  >
-                    <ZoomOutIcon />
-                  </button>
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 min-w-[3rem] text-center">
-                    {Math.round(markdownScale * 100)}%
-                  </span>
-                  <button
-                    onClick={handleMarkdownZoomIn}
-                    disabled={markdownScale >= 3}
-                    className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors focus:outline-none disabled:opacity-30 disabled:cursor-not-allowed"
-                    title={t('map.zoomIn')}
-                  >
-                    <ZoomInIcon />
-                  </button>
-                </>
-              )}
+
               
               {/* Refresh Button for HTML/JSX/Vue Preview */}
               {(currentNote?.filePath.endsWith(".html") || currentNote?.filePath.endsWith(".jsx") || currentNote?.filePath.endsWith(".vue")) && viewMode === "preview" && (
