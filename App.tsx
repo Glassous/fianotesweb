@@ -597,7 +597,7 @@ const MainLayout: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   
   // Typst Scale State
-  const [typstScale, setTypstScale] = useState(1);
+  const [typstScale, setTypstScale] = useState(1.5);
   const [markdownScale, setMarkdownScale] = useState(1);
   const [imageScale, setImageScale] = useState(1);
 
