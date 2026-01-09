@@ -20,28 +20,11 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
     setIsLoading(true);
     setError(null);
 
-    // Create iframe for isolated rendering
-    const iframe = document.createElement("iframe");
-    iframe.style.width = "100%";
-    iframe.style.height = "100%";
-    iframe.style.border = "none";
-    iframe.style.backgroundColor = "white";
-    
-    container.appendChild(iframe);
-
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) {
-      setError("Failed to create iframe document");
-      setIsLoading(false);
-      return;
-    }
-
     // Check if content contains TikZ
     const hasTikZ = /\\begin\{tikzpicture\}/.test(content);
 
-    // Write the HTML structure
-    iframeDoc.open();
-    iframeDoc.write(`
+    // Create HTML content for iframe
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -82,9 +65,9 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
             height: auto;
           }
         </style>
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
         ${hasTikZ ? '<link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">' : ''}
-        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-        ${hasTikZ ? '<script src="https://tikzjax.com/v1/tikzjax.js"></script>' : ''}
+        ${hasTikZ ? '<script src="https://tikzjax.com/v1/tikzjax.js"><\/script>' : ''}
         <script>
           window.MathJax = {
             tex: {
@@ -106,7 +89,7 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
               }
             }
           };
-        </script>
+        <\/script>
       </head>
       <body>
         <div id="loading" class="loading">Rendering LaTeX${hasTikZ ? ' with TikZ graphics' : ''}...</div>
@@ -114,19 +97,40 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
         <div id="error" class="error" style="display: none;"></div>
       </body>
       </html>
-    `);
-    iframeDoc.close();
+    `;
+
+    // Create iframe for isolated rendering
+    const iframe = document.createElement("iframe");
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
+    iframe.style.border = "none";
+    iframe.style.backgroundColor = "white";
+    // Don't use sandbox attribute to avoid security issues with allow-scripts + allow-same-origin
+    // srcdoc provides isolation, and we need full script access for MathJax and TikZJax
+    iframe.srcdoc = htmlContent;
+    
+    container.appendChild(iframe);
 
     // Wait for MathJax (and TikZJax if needed) to load
     const checkLibraries = setInterval(() => {
       const win = iframe.contentWindow as any;
-      const mathJaxReady = win && win.MathJax && win.MathJax.typesetPromise;
-      const tikzReady = !hasTikZ || (win && win.tikzjax);
+      if (!win) return;
+      
+      const mathJaxReady = win.MathJax && win.MathJax.typesetPromise;
+      // TikZJax loads as a global function
+      const tikzReady = !hasTikZ || (typeof win.tikzjax === 'function');
       
       if (mathJaxReady && tikzReady) {
         clearInterval(checkLibraries);
         
         try {
+          const iframeDoc = iframe.contentDocument;
+          if (!iframeDoc) {
+            setError("Cannot access iframe document");
+            setIsLoading(false);
+            return;
+          }
+
           const contentDiv = iframeDoc.getElementById("content");
           const loadingDiv = iframeDoc.getElementById("loading");
           const errorDiv = iframeDoc.getElementById("error");
@@ -185,7 +189,7 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
 
           contentDiv.innerHTML = processedContent;
 
-          // Insert TikZ pictures back as script tags for tikzjax to process
+          // Insert TikZ pictures back as script tags BEFORE MathJax processing
           if (hasTikZ && tikzPictures.length > 0) {
             const placeholders = contentDiv.querySelectorAll('.tikz-placeholder');
             placeholders.forEach((placeholder, index) => {
@@ -199,13 +203,54 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
           // Typeset with MathJax first
           win.MathJax.typesetPromise([contentDiv])
             .then(() => {
-              // If TikZ is present, wait a bit for tikzjax to process
-              if (hasTikZ) {
-                setTimeout(() => {
-                  if (loadingDiv) loadingDiv.style.display = "none";
-                  contentDiv.style.display = "block";
+              // If TikZ is present, manually trigger tikzjax processing
+              if (hasTikZ && win.tikzjax) {
+                // Show content first
+                if (loadingDiv) loadingDiv.style.display = "none";
+                contentDiv.style.display = "block";
+                
+                // Find all TikZ script tags and process them
+                const tikzScripts = contentDiv.querySelectorAll('script[type="text/tikz"]');
+                
+                if (tikzScripts.length > 0) {
+                  // Process each TikZ script
+                  const promises = Array.from(tikzScripts).map((script) => {
+                    return new Promise((resolve, reject) => {
+                      try {
+                        // Create a container for the SVG
+                        const container = iframeDoc.createElement('div');
+                        container.className = 'tikz-container';
+                        script.parentNode?.insertBefore(container, script);
+                        
+                        // TikZJax expects a callback function
+                        const tikzCode = script.textContent || '';
+                        win.tikzjax(tikzCode, (svg: string) => {
+                          if (svg) {
+                            container.innerHTML = svg;
+                            script.remove();
+                            resolve(svg);
+                          } else {
+                            reject(new Error('TikZJax returned empty SVG'));
+                          }
+                        });
+                      } catch (err) {
+                        console.error('TikZ rendering error:', err);
+                        reject(err);
+                      }
+                    });
+                  });
+                  
+                  Promise.all(promises)
+                    .then(() => {
+                      setIsLoading(false);
+                    })
+                    .catch((err) => {
+                      console.error('TikZ processing failed:', err);
+                      setIsLoading(false);
+                    });
+                } else {
                   setIsLoading(false);
-                }, 1000); // Give tikzjax time to render
+                }
               } else {
                 if (loadingDiv) loadingDiv.style.display = "none";
                 contentDiv.style.display = "block";
@@ -229,16 +274,16 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
           setIsLoading(false);
         }
       }
-    }, 100);
+    }, 150);
 
-    // Cleanup timeout after 15 seconds (longer for TikZ)
+    // Cleanup timeout after 20 seconds (longer for TikZ)
     const timeout = setTimeout(() => {
       clearInterval(checkLibraries);
       if (isLoading) {
-        setError(hasTikZ ? "Libraries failed to load (MathJax/TikZJax)" : "MathJax failed to load");
+        setError(hasTikZ ? "Libraries failed to load (MathJax/TikZJax). Check browser console for details." : "MathJax failed to load");
         setIsLoading(false);
       }
-    }, 15000);
+    }, 20000);
 
     // Listen for messages from iframe
     const handleMessage = (event: MessageEvent) => {
@@ -264,6 +309,9 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
             {t("errors.renderFailed", "Rendering failed")}
           </p>
           <p className="text-red-500 dark:text-red-300 text-sm mt-2">{error}</p>
+          <p className="text-red-400 dark:text-red-400 text-xs mt-2">
+            Check browser console (F12) for more details
+          </p>
         </div>
       )}
       <div ref={containerRef} className="w-full h-full" />
