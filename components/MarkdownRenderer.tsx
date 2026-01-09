@@ -404,6 +404,35 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const { isAiLocked } = useChatContext();
+
+  // Handle copy event to intercept math formula copying
+  const handleCopy = useCallback((e: ClipboardEvent) => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+
+    // Check if selection contains KaTeX rendered math
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    
+    // Find the closest KaTeX element
+    let mathElement: HTMLElement | null = null;
+    if (container.nodeType === Node.ELEMENT_NODE) {
+      mathElement = (container as HTMLElement).closest('.katex, .katex-display');
+    } else if (container.parentElement) {
+      mathElement = container.parentElement.closest('.katex, .katex-display');
+    }
+
+    if (mathElement) {
+      // Find the annotation element that contains the LaTeX source
+      const annotation = mathElement.querySelector('annotation[encoding="application/x-tex"]');
+      if (annotation && annotation.textContent) {
+        e.preventDefault();
+        e.clipboardData?.setData('text/plain', annotation.textContent);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
@@ -419,7 +448,13 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     };
   }, [selectionMenu]);
 
-  const { isAiLocked } = useChatContext();
+  // Add copy event listener for math formulas
+  useEffect(() => {
+    document.addEventListener('copy', handleCopy);
+    return () => {
+      document.removeEventListener('copy', handleCopy);
+    };
+  }, [handleCopy]);
 
   const handleMouseUp = () => {
       if (isAiLocked) return;
