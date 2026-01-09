@@ -23,6 +23,61 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
     // Check if content contains TikZ
     const hasTikZ = /\\begin\{tikzpicture\}/.test(content);
 
+    // Extract TikZ pictures early for embedding in HTML
+    let tikzPictures: string[] = [];
+    let contentWithoutTikz = content;
+    
+    if (hasTikZ) {
+      contentWithoutTikz = content.replace(
+        /\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g,
+        (match) => {
+          const index = tikzPictures.length;
+          tikzPictures.push(match);
+          return `__TIKZ_PLACEHOLDER_${index}__`;
+        }
+      );
+    }
+
+    // Pre-process content for HTML
+    let processedContent = contentWithoutTikz
+      .replace(/\\documentclass(\[.*?\])?\{.*?\}/g, '')
+      .replace(/\\usepackage(\[.*?\])?\{.*?\}/g, '')
+      .replace(/\\usetikzlibrary\{.*?\}/g, '')
+      .replace(/\\begin\{document\}/g, '')
+      .replace(/\\end\{document\}/g, '')
+      .replace(/\\title\{(.*?)\}/g, '<h1>$1</h1>')
+      .replace(/\\author\{(.*?)\}/g, '<p class="author">$1</p>')
+      .replace(/\\date\{(.*?)\}/g, '<p class="date">$1</p>')
+      .replace(/\\maketitle/g, '')
+      .replace(/\\section\{(.*?)\}/g, '<h2>$1</h2>')
+      .replace(/\\subsection\{(.*?)\}/g, '<h3>$1</h3>')
+      .replace(/\\subsubsection\{(.*?)\}/g, '<h4>$1</h4>')
+      .replace(/\\paragraph\{(.*?)\}/g, '<h5>$1</h5>')
+      .replace(/\\textbf\{(.*?)\}/g, '<strong>$1</strong>')
+      .replace(/\\textit\{(.*?)\}/g, '<em>$1</em>')
+      .replace(/\\emph\{(.*?)\}/g, '<em>$1</em>')
+      .replace(/\\texttt\{(.*?)\}/g, '<code>$1</code>')
+      .replace(/\\item/g, '<li>')
+      .replace(/\\begin\{itemize\}/g, '<ul>')
+      .replace(/\\end\{itemize\}/g, '</ul>')
+      .replace(/\\begin\{enumerate\}/g, '<ol>')
+      .replace(/\\end\{enumerate\}/g, '</ol>')
+      .replace(/\\href\{(.*?)\}\{(.*?)\}/g, '<a href="$1">$2</a>')
+      .replace(/\\url\{(.*?)\}/g, '<a href="$1">$1</a>')
+      .replace(/``/g, '"')
+      .replace(/''/g, '"')
+      .replace(/---/g, '—')
+      .replace(/--/g, '–');
+
+    // Replace TikZ placeholders with script tags in the HTML string
+    tikzPictures.forEach((tikzCode, index) => {
+      const tikzScript = `<script type="text/tikz">${tikzCode}</script>`;
+      processedContent = processedContent.replace(
+        `__TIKZ_PLACEHOLDER_${index}__`,
+        tikzScript
+      );
+    });
+
     // Create HTML content for iframe
     const htmlContent = `
       <!DOCTYPE html>
@@ -58,16 +113,43 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
             color: #666;
           }
           /* TikZ styles */
-          svg.tikz {
+          svg {
             display: block;
             margin: 20px auto;
             max-width: 100%;
             height: auto;
           }
         </style>
-        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
         ${hasTikZ ? '<link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">' : ''}
         ${hasTikZ ? '<script src="https://tikzjax.com/v1/tikzjax.js"><\/script>' : ''}
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+        <script>
+          // Polyfill btoa to handle Unicode characters (fix for TikZJax with non-Latin1 characters)
+          (function() {
+            const originalBtoa = window.btoa;
+            window.btoa = function(str) {
+              try {
+                // Try original btoa first
+                return originalBtoa(str);
+              } catch (e) {
+                // If it fails, encode UTF-8 properly
+                return originalBtoa(unescape(encodeURIComponent(str)));
+              }
+            };
+            
+            const originalAtob = window.atob;
+            window.atob = function(str) {
+              try {
+                const decoded = originalAtob(str);
+                // Try to decode as UTF-8
+                return decodeURIComponent(escape(decoded));
+              } catch (e) {
+                // Fallback to original
+                return originalAtob(str);
+              }
+            };
+          })();
+        <\/script>
         <script>
           window.MathJax = {
             tex: {
@@ -93,7 +175,7 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
       </head>
       <body>
         <div id="loading" class="loading">Rendering LaTeX${hasTikZ ? ' with TikZ graphics' : ''}...</div>
-        <div id="content" style="display: none;"></div>
+        <div id="content">${processedContent}</div>
         <div id="error" class="error" style="display: none;"></div>
       </body>
       </html>
@@ -117,8 +199,8 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
       if (!win) return;
       
       const mathJaxReady = win.MathJax && win.MathJax.typesetPromise;
-      // TikZJax loads as a global function
-      const tikzReady = !hasTikZ || (typeof win.tikzjax === 'function');
+      // Check if TikZJax has loaded by looking for the global tex object it creates
+      const tikzReady = !hasTikZ || (win.tex !== undefined);
       
       if (mathJaxReady && tikzReady) {
         clearInterval(checkLibraries);
@@ -141,119 +223,31 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
             return;
           }
 
-          // Convert LaTeX to HTML-friendly format
-          // Preserve TikZ environments and math environments
-          let processedContent = content
-            .replace(/\\documentclass(\[.*?\])?\{.*?\}/g, '')
-            .replace(/\\usepackage(\[.*?\])?\{.*?\}/g, '')
-            .replace(/\\usetikzlibrary\{.*?\}/g, '')
-            .replace(/\\begin\{document\}/g, '')
-            .replace(/\\end\{document\}/g, '')
-            .replace(/\\title\{(.*?)\}/g, '<h1>$1</h1>')
-            .replace(/\\author\{(.*?)\}/g, '<p class="author">$1</p>')
-            .replace(/\\date\{(.*?)\}/g, '<p class="date">$1</p>')
-            .replace(/\\maketitle/g, '');
-
-          // Extract and preserve TikZ pictures
-          const tikzPictures: string[] = [];
-          processedContent = processedContent.replace(
-            /\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g,
-            (match) => {
-              const index = tikzPictures.length;
-              tikzPictures.push(match);
-              return `<div class="tikz-placeholder" data-index="${index}"></div>`;
-            }
-          );
-
-          // Continue with other replacements
-          processedContent = processedContent
-            .replace(/\\section\{(.*?)\}/g, '<h2>$1</h2>')
-            .replace(/\\subsection\{(.*?)\}/g, '<h3>$1</h3>')
-            .replace(/\\subsubsection\{(.*?)\}/g, '<h4>$1</h4>')
-            .replace(/\\paragraph\{(.*?)\}/g, '<h5>$1</h5>')
-            .replace(/\\textbf\{(.*?)\}/g, '<strong>$1</strong>')
-            .replace(/\\textit\{(.*?)\}/g, '<em>$1</em>')
-            .replace(/\\emph\{(.*?)\}/g, '<em>$1</em>')
-            .replace(/\\texttt\{(.*?)\}/g, '<code>$1</code>')
-            .replace(/\\item/g, '<li>')
-            .replace(/\\begin\{itemize\}/g, '<ul>')
-            .replace(/\\end\{itemize\}/g, '</ul>')
-            .replace(/\\begin\{enumerate\}/g, '<ol>')
-            .replace(/\\end\{enumerate\}/g, '</ol>')
-            .replace(/\\href\{(.*?)\}\{(.*?)\}/g, '<a href="$1">$2</a>')
-            .replace(/\\url\{(.*?)\}/g, '<a href="$1">$1</a>')
-            .replace(/``/g, '"')
-            .replace(/''/g, '"')
-            .replace(/---/g, '—')
-            .replace(/--/g, '–');
-
-          contentDiv.innerHTML = processedContent;
-
-          // Insert TikZ pictures back as script tags BEFORE MathJax processing
-          if (hasTikZ && tikzPictures.length > 0) {
-            const placeholders = contentDiv.querySelectorAll('.tikz-placeholder');
-            placeholders.forEach((placeholder, index) => {
-              const script = iframeDoc.createElement('script');
-              script.type = 'text/tikz';
-              script.textContent = tikzPictures[index];
-              placeholder.replaceWith(script);
-            });
-          }
-
-          // Typeset with MathJax first
+          // Content is already in the div, just need to process with MathJax
           win.MathJax.typesetPromise([contentDiv])
             .then(() => {
-              // If TikZ is present, manually trigger tikzjax processing
-              if (hasTikZ && win.tikzjax) {
-                // Show content first
-                if (loadingDiv) loadingDiv.style.display = "none";
-                contentDiv.style.display = "block";
-                
-                // Find all TikZ script tags and process them
-                const tikzScripts = contentDiv.querySelectorAll('script[type="text/tikz"]');
-                
-                if (tikzScripts.length > 0) {
-                  // Process each TikZ script
-                  const promises = Array.from(tikzScripts).map((script) => {
-                    return new Promise((resolve, reject) => {
-                      try {
-                        // Create a container for the SVG
-                        const container = iframeDoc.createElement('div');
-                        container.className = 'tikz-container';
-                        script.parentNode?.insertBefore(container, script);
-                        
-                        // TikZJax expects a callback function
-                        const tikzCode = script.textContent || '';
-                        win.tikzjax(tikzCode, (svg: string) => {
-                          if (svg) {
-                            container.innerHTML = svg;
-                            script.remove();
-                            resolve(svg);
-                          } else {
-                            reject(new Error('TikZJax returned empty SVG'));
-                          }
-                        });
-                      } catch (err) {
-                        console.error('TikZ rendering error:', err);
-                        reject(err);
-                      }
-                    });
-                  });
+              // Hide loading, show content
+              if (loadingDiv) loadingDiv.style.display = "none";
+              
+              // If TikZ is present, wait for rendering to complete
+              if (hasTikZ) {
+                const checkTikzRendering = setInterval(() => {
+                  const tikzScripts = contentDiv.querySelectorAll('script[type="text/tikz"]');
+                  const svgs = contentDiv.querySelectorAll('svg');
                   
-                  Promise.all(promises)
-                    .then(() => {
-                      setIsLoading(false);
-                    })
-                    .catch((err) => {
-                      console.error('TikZ processing failed:', err);
-                      setIsLoading(false);
-                    });
-                } else {
+                  // TikZJax replaces script tags with SVGs
+                  if (tikzScripts.length === 0 || svgs.length > 0) {
+                    clearInterval(checkTikzRendering);
+                    setIsLoading(false);
+                  }
+                }, 200);
+                
+                // Timeout after 15 seconds
+                setTimeout(() => {
+                  clearInterval(checkTikzRendering);
                   setIsLoading(false);
-                }
+                }, 15000);
               } else {
-                if (loadingDiv) loadingDiv.style.display = "none";
-                contentDiv.style.display = "block";
                 setIsLoading(false);
               }
             })
