@@ -61,6 +61,9 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
     }
   }, [filePath]);
 
+  // Check if current file is an image
+  const isImageFile = note && /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(note.filePath);
+
   return (
     <div 
         className={`w-full h-full absolute inset-0 bg-gray-50 dark:bg-zinc-950 flex flex-col ${isActive ? 'z-10' : 'z-0 invisible'}`}
@@ -68,7 +71,7 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
         {note?.content ? (
             <div 
                 id={`scroll-container-${filePath}`}
-                className="w-full h-full flex flex-col overflow-y-auto"
+                className={`w-full h-full flex flex-col ${isImageFile ? 'overflow-hidden' : 'overflow-y-auto'}`}
             >
             <div className="mx-auto w-full flex-1 flex flex-col">
                 {note.filePath.endsWith(".html") && viewMode === "preview" ? (
