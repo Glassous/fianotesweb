@@ -1,26 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { LoadingAnimation } from "./LoadingAnimation";
 
 interface TexRendererProps {
   content: string;
   scale?: number;
 }
 
-export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) => {
-  const { t } = useTranslation();
+export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1.5 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [hasTikZ, setHasTikZ] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const container = containerRef.current;
+    
+    // Reset initialization flag when content changes
+    setIsInitialized(false);
     container.innerHTML = "";
-    setIsLoading(true);
-    setError(null);
 
     // Check if content contains TikZ
     const contentHasTikZ = /\\begin\{tikzpicture\}/.test(content);
@@ -109,12 +107,15 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
             background: white;
             color: #000;
             overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
           }
           #content {
             max-width: 800px;
-            margin: 0 auto;
             transform-origin: top center;
-            transform: scale(${scale});
+            transform: scale(1.5);
           }
           .error {
             color: #dc2626;
@@ -239,6 +240,8 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
     iframe.srcdoc = htmlContent;
     
     container.appendChild(iframe);
+    iframeRef.current = iframe;
+    setIsInitialized(true);
 
     // Wait for MathJax (and TikZJax if needed) to load
     const checkLibraries = setInterval(() => {
@@ -255,8 +258,6 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
         try {
           const iframeDoc = iframe.contentDocument;
           if (!iframeDoc) {
-            setError("Cannot access iframe document");
-            setIsLoading(false);
             return;
           }
 
@@ -264,8 +265,6 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
           const errorDiv = iframeDoc.getElementById("error");
 
           if (!contentDiv) {
-            setError("Content container not found");
-            setIsLoading(false);
             return;
           }
 
@@ -298,14 +297,8 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
                     }
                     
                     // Successfully rendered (with or without errors shown inline)
-                    setIsLoading(false);
-                    setError(null);
                   }
                 }, 200);
-              } else {
-                // No TikZ, rendering complete
-                setIsLoading(false);
-                setError(null);
               }
             })
             .catch((err: Error) => {
@@ -314,14 +307,10 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
                 errorDiv.textContent = `Rendering error: ${err.message}`;
                 errorDiv.style.display = "block";
               }
-              setError(err.message);
-              setIsLoading(false);
             });
 
         } catch (err: any) {
           console.error("TeX processing error:", err);
-          setError(err.message);
-          setIsLoading(false);
         }
       }
     }, 150);
@@ -329,17 +318,13 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
     // Cleanup timeout after 20 seconds (longer for TikZ)
     const timeout = setTimeout(() => {
       clearInterval(checkLibraries);
-      if (isLoading) {
-        setError(contentHasTikZ ? "Libraries failed to load (MathJax/TikZJax). Check browser console for details." : "MathJax failed to load");
-        setIsLoading(false);
-      }
+      console.error(contentHasTikZ ? "Libraries failed to load (MathJax/TikZJax). Check browser console for details." : "MathJax failed to load");
     }, 20000);
 
     // Listen for messages from iframe (not used currently but kept for future)
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "TEX_RENDER_SUCCESS") {
-        setIsLoading(false);
-        setError(null);
+        // Render success
       }
     };
 
@@ -350,33 +335,23 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
       clearTimeout(timeout);
       window.removeEventListener("message", handleMessage);
     };
-  }, [content, scale]);
+  }, [content]);
+
+  // Separate effect for scale changes - only update transform without re-rendering
+  useEffect(() => {
+    if (iframeRef.current && isInitialized) {
+      const iframeDoc = iframeRef.current.contentDocument;
+      if (iframeDoc) {
+        const contentDiv = iframeDoc.getElementById("content");
+        if (contentDiv) {
+          (contentDiv as HTMLElement).style.transform = `scale(${scale})`;
+        }
+      }
+    }
+  }, [scale, isInitialized]);
 
   return (
-    <div className="w-full h-full bg-white dark:bg-zinc-900 overflow-auto relative">
-      {/* Loading Overlay */}
-      {isLoading && !error && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm transition-all duration-300">
-          <LoadingAnimation size="lg" color="bg-blue-500" />
-          <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium animate-pulse">
-            {hasTikZ ? "Rendering LaTeX with TikZ graphics..." : "Rendering LaTeX..."}
-          </p>
-        </div>
-      )}
-
-      {/* Error Display */}
-      {error && (
-        <div className="absolute top-4 left-4 right-4 z-20 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg">
-          <p className="text-red-600 dark:text-red-400 font-medium">
-            {t("errors.renderFailed", "Rendering failed")}
-          </p>
-          <p className="text-red-500 dark:text-red-300 text-sm mt-2">{error}</p>
-          <p className="text-red-400 dark:text-red-400 text-xs mt-2">
-            Check browser console (F12) for more details
-          </p>
-        </div>
-      )}
-
+    <div className="w-full h-full bg-white dark:bg-zinc-900 overflow-auto relative flex items-center justify-center">
       <div ref={containerRef} className="w-full h-full" />
     </div>
   );

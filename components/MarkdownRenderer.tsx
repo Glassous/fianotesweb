@@ -12,6 +12,7 @@ import mermaid from "mermaid";
 // @ts-ignore
 import { Graphviz } from 'graphviz-react';
 import { MapCard } from "./MapCard";
+import { TikZBlock } from "./TikZBlock";
 
 interface MarkdownRendererProps {
   content: string;
@@ -476,6 +477,14 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             isDark={isDark}
           />
         );
+      }
+
+      if (match && (match[1] === "latex" || match[1] === "tex" || match[1] === "tikz")) {
+        const codeContent = String(children).replace(/\n$/, "");
+        // Check if content contains TikZ
+        if (/\\begin\{tikzpicture\}/.test(codeContent) || match[1] === "tikz") {
+          return <TikZBlock code={codeContent} />;
+        }
       }
       
       return (
