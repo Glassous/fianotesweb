@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LoadingAnimation } from "./LoadingAnimation";
 
 interface TexRendererProps {
   content: string;
@@ -11,6 +12,7 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasTikZ, setHasTikZ] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -21,18 +23,32 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
     setError(null);
 
     // Check if content contains TikZ
-    const hasTikZ = /\\begin\{tikzpicture\}/.test(content);
+    const contentHasTikZ = /\\begin\{tikzpicture\}/.test(content);
+    setHasTikZ(contentHasTikZ);
 
     // Extract TikZ pictures early for embedding in HTML
     let tikzPictures: string[] = [];
     let contentWithoutTikz = content;
     
-    if (hasTikZ) {
+    if (contentHasTikZ) {
       contentWithoutTikz = content.replace(
         /\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g,
         (match) => {
           const index = tikzPictures.length;
-          tikzPictures.push(match);
+          // Clean TikZ code: remove problematic decorations and options
+          let cleanedTikz = match
+            // Remove .expanded which is not supported
+            .replace(/\.expanded/g, '')
+            // Remove decoration options entirely (not well supported in TikZJax)
+            .replace(/,?\s*decoration=\{[^}]*\}/g, '')
+            .replace(/,?\s*decoration=[a-zA-Z]+/g, '')
+            // Remove decorate option
+            .replace(/,?\s*decorate\s*(?=[\],])/g, '')
+            // Clean up double commas and trailing commas
+            .replace(/,\s*,/g, ',')
+            .replace(/\[\s*,/g, '[')
+            .replace(/,\s*\]/g, ']');
+          tikzPictures.push(cleanedTikz);
           return `__TIKZ_PLACEHOLDER_${index}__`;
         }
       );
@@ -71,6 +87,7 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
 
     // Replace TikZ placeholders with script tags in the HTML string
     tikzPictures.forEach((tikzCode, index) => {
+      // TikZJax only needs the tikzpicture environment, no document wrapper
       const tikzScript = `<script type="text/tikz">${tikzCode}</script>`;
       processedContent = processedContent.replace(
         `__TIKZ_PLACEHOLDER_${index}__`,
@@ -107,11 +124,6 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
             border: 1px solid #fca5a5;
             margin: 20px;
           }
-          .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-          }
           /* TikZ styles */
           svg {
             display: block;
@@ -119,10 +131,26 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
             max-width: 100%;
             height: auto;
           }
+          /* Hide TikZ console output */
+          .tikzjax-console {
+            display: none !important;
+          }
+          /* Style for TikZ error fallback */
+          .tikz-error {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+          }
         </style>
-        ${hasTikZ ? '<link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">' : ''}
-        ${hasTikZ ? '<script src="https://tikzjax.com/v1/tikzjax.js"><\/script>' : ''}
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"><\/script>
+        ${contentHasTikZ ? '<link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">' : ''}
+        ${contentHasTikZ ? '<script src="https://tikzjax.com/v1/tikzjax.js"><\/script>' : ''}
         <script>
           // Polyfill btoa to handle Unicode characters (fix for TikZJax with non-Latin1 characters)
           (function() {
@@ -171,10 +199,29 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
               }
             }
           };
+          
+          // Capture TikZJax errors and handle gracefully
+          ${contentHasTikZ ? `
+          window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('tikz')) {
+              console.warn('TikZ rendering error:', e.message);
+              // Find all unrendered TikZ scripts and show error message
+              const tikzScripts = document.querySelectorAll('script[type="text/tikz"]');
+              tikzScripts.forEach(function(script) {
+                if (script.parentNode && !script.nextElementSibling) {
+                  const errorDiv = document.createElement('div');
+                  errorDiv.className = 'tikz-error';
+                  errorDiv.textContent = 'TikZ rendering failed. The diagram may use unsupported features.\\n\\nOriginal code:\\n' + script.textContent;
+                  script.parentNode.insertBefore(errorDiv, script.nextSibling);
+                }
+              });
+              e.preventDefault();
+            }
+          }, true);
+          ` : ''}
         <\/script>
       </head>
       <body>
-        <div id="loading" class="loading">Rendering LaTeX${hasTikZ ? ' with TikZ graphics' : ''}...</div>
         <div id="content">${processedContent}</div>
         <div id="error" class="error" style="display: none;"></div>
       </body>
@@ -200,7 +247,7 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
       
       const mathJaxReady = win.MathJax && win.MathJax.typesetPromise;
       // Check if TikZJax has loaded by looking for the global tex object it creates
-      const tikzReady = !hasTikZ || (win.tex !== undefined);
+      const tikzReady = !contentHasTikZ || (win.tex !== undefined);
       
       if (mathJaxReady && tikzReady) {
         clearInterval(checkLibraries);
@@ -214,7 +261,6 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
           }
 
           const contentDiv = iframeDoc.getElementById("content");
-          const loadingDiv = iframeDoc.getElementById("loading");
           const errorDiv = iframeDoc.getElementById("error");
 
           if (!contentDiv) {
@@ -226,29 +272,40 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
           // Content is already in the div, just need to process with MathJax
           win.MathJax.typesetPromise([contentDiv])
             .then(() => {
-              // Hide loading, show content
-              if (loadingDiv) loadingDiv.style.display = "none";
-              
               // If TikZ is present, wait for rendering to complete
-              if (hasTikZ) {
+              if (contentHasTikZ) {
+                let attempts = 0;
+                const maxAttempts = 75; // 15 seconds with 200ms intervals
+                
                 const checkTikzRendering = setInterval(() => {
+                  attempts++;
                   const tikzScripts = contentDiv.querySelectorAll('script[type="text/tikz"]');
                   const svgs = contentDiv.querySelectorAll('svg');
+                  const errorDivs = contentDiv.querySelectorAll('.tikz-error');
                   
-                  // TikZJax replaces script tags with SVGs
-                  if (tikzScripts.length === 0 || svgs.length > 0) {
+                  // TikZJax replaces script tags with SVGs, or we show error
+                  if (tikzScripts.length === 0 || svgs.length > 0 || errorDivs.length > 0 || attempts >= maxAttempts) {
                     clearInterval(checkTikzRendering);
+                    
+                    // If timeout and no SVGs, show fallback
+                    if (attempts >= maxAttempts && svgs.length === 0 && errorDivs.length === 0) {
+                      tikzScripts.forEach((script) => {
+                        const errorDiv = iframeDoc.createElement('div');
+                        errorDiv.className = 'tikz-error';
+                        errorDiv.textContent = 'TikZ rendering timeout. The diagram may be too complex or use unsupported features.\\n\\nOriginal code:\\n' + script.textContent;
+                        script.parentNode?.insertBefore(errorDiv, script.nextSibling);
+                      });
+                    }
+                    
+                    // Successfully rendered (with or without errors shown inline)
                     setIsLoading(false);
+                    setError(null);
                   }
                 }, 200);
-                
-                // Timeout after 15 seconds
-                setTimeout(() => {
-                  clearInterval(checkTikzRendering);
-                  setIsLoading(false);
-                }, 15000);
               } else {
+                // No TikZ, rendering complete
                 setIsLoading(false);
+                setError(null);
               }
             })
             .catch((err: Error) => {
@@ -257,7 +314,6 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
                 errorDiv.textContent = `Rendering error: ${err.message}`;
                 errorDiv.style.display = "block";
               }
-              if (loadingDiv) loadingDiv.style.display = "none";
               setError(err.message);
               setIsLoading(false);
             });
@@ -274,15 +330,16 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
     const timeout = setTimeout(() => {
       clearInterval(checkLibraries);
       if (isLoading) {
-        setError(hasTikZ ? "Libraries failed to load (MathJax/TikZJax). Check browser console for details." : "MathJax failed to load");
+        setError(contentHasTikZ ? "Libraries failed to load (MathJax/TikZJax). Check browser console for details." : "MathJax failed to load");
         setIsLoading(false);
       }
     }, 20000);
 
-    // Listen for messages from iframe
+    // Listen for messages from iframe (not used currently but kept for future)
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "TEX_RENDER_SUCCESS") {
         setIsLoading(false);
+        setError(null);
       }
     };
 
@@ -296,9 +353,20 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
   }, [content, scale]);
 
   return (
-    <div className="w-full h-full bg-white dark:bg-zinc-900 overflow-auto">
+    <div className="w-full h-full bg-white dark:bg-zinc-900 overflow-auto relative">
+      {/* Loading Overlay */}
+      {isLoading && !error && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm transition-all duration-300">
+          <LoadingAnimation size="lg" color="bg-blue-500" />
+          <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium animate-pulse">
+            {hasTikZ ? "Rendering LaTeX with TikZ graphics..." : "Rendering LaTeX..."}
+          </p>
+        </div>
+      )}
+
+      {/* Error Display */}
       {error && (
-        <div className="p-4 m-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div className="absolute top-4 left-4 right-4 z-20 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg">
           <p className="text-red-600 dark:text-red-400 font-medium">
             {t("errors.renderFailed", "Rendering failed")}
           </p>
@@ -308,6 +376,7 @@ export const TexRenderer: React.FC<TexRendererProps> = ({ content, scale = 1 }) 
           </p>
         </div>
       )}
+
       <div ref={containerRef} className="w-full h-full" />
     </div>
   );
