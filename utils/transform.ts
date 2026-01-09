@@ -141,6 +141,7 @@ export const getLanguageFromExtension = (filePath: string): string | null => {
     case "ps1": return "powershell";
     case "vue": return "xml";
     case "typ": return "typst";
+    case "tex": return "latex";
     default: return null;
   }
 };

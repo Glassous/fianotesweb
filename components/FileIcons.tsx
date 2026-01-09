@@ -49,6 +49,20 @@ const TypstIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const TexIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    className={className}
+    fill="#008080"
+  >
+    <path
+      fill="#008080"
+      d="M4.5 6h15v2h-6v10h-3V8h-6V6zm12 8h3v2h-3v-2z"
+    />
+  </svg>
+);
+
 interface IconProps {
   className?: string;
 }
@@ -93,6 +107,8 @@ export const getFileIcon = (fileName: string, className?: string) => {
       return <SiVuedotjs className={`${cls} text-green-500`} />;
     case "typ":
       return <TypstIcon className={cls} />;
+    case "tex":
+      return <TexIcon className={cls} />;
     
     // Markdown
     case "md":

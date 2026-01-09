@@ -6,6 +6,7 @@ import { VueRenderer } from "./VueRenderer";
 import { PDFViewer } from "./PDFViewer";
 import { ImageViewer } from "./ImageViewer";
 import { TypstRenderer } from "./TypstRenderer";
+import { TexRenderer } from "./TexRenderer";
 import { getLanguageFromExtension } from "../utils/transform";
 import { RawNoteFile } from "../types";
 
@@ -118,10 +119,18 @@ export const FileTabContent: React.FC<FileTabContentProps> = React.memo(({
                         scale={typstScale}
                     />
                 </div>
-                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || (note.filePath.endsWith(".typ") && viewMode === "source") || (note.filePath.endsWith(".md") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
+                ) : note.filePath.endsWith(".tex") && viewMode === "preview" ? (
+                <div className={`w-full flex-1 min-h-0 ${isResizing ? "pointer-events-none" : ""}`}>
+                    <TexRenderer
+                        key={`${note.filePath}-${refreshKey}`}
+                        content={note.content}
+                        scale={typstScale}
+                    />
+                </div>
+                ) : (note.filePath.endsWith(".html") && viewMode === "source") || (note.filePath.endsWith(".jsx") && viewMode === "source") || (note.filePath.endsWith(".vue") && viewMode === "source") || (note.filePath.endsWith(".typ") && viewMode === "source") || (note.filePath.endsWith(".tex") && viewMode === "source") || (note.filePath.endsWith(".md") && viewMode === "source") || getLanguageFromExtension(note.filePath) ? (
                 <CodeViewer 
                     content={note.content} 
-                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : note.filePath.endsWith(".vue") ? "xml" : note.filePath.endsWith(".typ") ? "typst" : note.filePath.endsWith(".md") ? "markdown" : getLanguageFromExtension(note.filePath)!} 
+                    language={note.filePath.endsWith(".html") ? "xml" : note.filePath.endsWith(".jsx") ? "jsx" : note.filePath.endsWith(".vue") ? "xml" : note.filePath.endsWith(".typ") ? "typst" : note.filePath.endsWith(".tex") ? "latex" : note.filePath.endsWith(".md") ? "markdown" : getLanguageFromExtension(note.filePath)!} 
                     isDark={isDarkMode}
                 />
                 ) : (

@@ -1413,13 +1413,14 @@ const MainLayout: React.FC = () => {
 
           <div className="flex items-center gap-2 shrink-0 mb-1.5">
             {/* Zoom Controls (Moved) */}
-            {(currentNote?.filePath.endsWith(".typ") || (currentNote?.filePath.endsWith(".md") && viewMode === "preview") || /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(currentNote?.filePath || "")) && (() => {
+            {(currentNote?.filePath.endsWith(".typ") || currentNote?.filePath.endsWith(".tex") || (currentNote?.filePath.endsWith(".md") && viewMode === "preview") || /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(currentNote?.filePath || "")) && (() => {
                const isTypst = currentNote?.filePath.endsWith(".typ");
+               const isTex = currentNote?.filePath.endsWith(".tex");
                const isImage = /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(currentNote?.filePath || "");
-               const scale = isTypst ? typstScale : (isImage ? imageScale : markdownScale);
+               const scale = (isTypst || isTex) ? typstScale : (isImage ? imageScale : markdownScale);
                
                const setScale = (s: number) => {
-                   if (isTypst) {
+                   if (isTypst || isTex) {
                        setTypstScale(s);
                        if (activeFilePath) typstScalesRef.current[activeFilePath] = s;
                    } else if (isImage) {
@@ -1430,8 +1431,8 @@ const MainLayout: React.FC = () => {
                        if (activeFilePath) markdownScalesRef.current[activeFilePath] = s;
                    }
                };
-               const handleZoomOut = isTypst ? handleTypstZoomOut : (isImage ? handleImageZoomOut : handleMarkdownZoomOut);
-               const handleZoomIn = isTypst ? handleTypstZoomIn : (isImage ? handleImageZoomIn : handleMarkdownZoomIn);
+               const handleZoomOut = (isTypst || isTex) ? handleTypstZoomOut : (isImage ? handleImageZoomOut : handleMarkdownZoomOut);
+               const handleZoomIn = (isTypst || isTex) ? handleTypstZoomIn : (isImage ? handleImageZoomIn : handleMarkdownZoomIn);
 
                return (
                    <div className="hidden md:flex items-center gap-0.5 mr-2 relative" ref={zoomMenuRef}>
@@ -1481,8 +1482,8 @@ const MainLayout: React.FC = () => {
                );
             })()}
 
-            {/* HTML/JSX/Vue/Typst/Markdown Preview Toggle (Desktop Only) */}
-            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ") || currentNote.filePath.endsWith(".md")) && (
+            {/* HTML/JSX/Vue/Typst/TeX/Markdown Preview Toggle (Desktop Only) */}
+            {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ") || currentNote.filePath.endsWith(".tex") || currentNote.filePath.endsWith(".md")) && (
               <div className="hidden md:flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 mr-2">
                 <button
                   onClick={() => setViewMode("preview")}
@@ -1744,7 +1745,7 @@ const MainLayout: React.FC = () => {
                                 {/* Main Menu */}
                                 <div className={`w-full transition-transform duration-300 ease-in-out ${mobileMenuLevel === 'main' ? 'translate-x-0' : '-translate-x-full absolute top-0'}`}>
                                   {/* Preview/Source Toggle (Mobile) */}
-                                  {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ") || currentNote.filePath.endsWith(".md")) && (
+                                  {currentNote && (currentNote.filePath.endsWith(".html") || currentNote.filePath.endsWith(".jsx") || currentNote.filePath.endsWith(".vue") || currentNote.filePath.endsWith(".typ") || currentNote.filePath.endsWith(".tex") || currentNote.filePath.endsWith(".md")) && (
                                     <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-700">
                                       <div className="flex items-center bg-zinc-100 dark:bg-zinc-700 rounded-lg p-1">
                                         <button
@@ -1771,8 +1772,8 @@ const MainLayout: React.FC = () => {
                                     </div>
                                   )}
                                   
-                                  {/* Typst Zoom Controls (Mobile) */}
-                                  {currentNote?.filePath.endsWith(".typ") && viewMode === "preview" && (
+                                  {/* Typst/TeX Zoom Controls (Mobile) */}
+                                  {(currentNote?.filePath.endsWith(".typ") || currentNote?.filePath.endsWith(".tex")) && viewMode === "preview" && (
                                     <>
                                       <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-700">
                                         <div className="flex items-center justify-center gap-2">
