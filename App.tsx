@@ -1243,7 +1243,7 @@ const MainLayout: React.FC = () => {
           {/* Header Hover Sensor */}
           {!isHeaderPinned && !isMobile && (
             <div 
-              className="absolute top-0 left-0 right-0 h-4 z-50"
+              className="absolute top-0 left-0 right-0 h-4 z-[60]"
               onMouseEnter={() => setIsHeaderHovered(true)}
             />
           )}
@@ -1255,7 +1255,7 @@ const MainLayout: React.FC = () => {
           <header 
             onMouseLeave={() => !isHeaderPinned && setIsHeaderHovered(false)}
             className={`
-              absolute top-0 left-0 right-0 z-40
+              absolute top-0 left-0 right-0 z-50
               h-12 bg-gray-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 
               flex items-end px-2 shrink-0 justify-between 
               transition-all duration-300 ease-in-out pt-2 gap-2
