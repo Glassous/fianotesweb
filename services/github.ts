@@ -82,6 +82,29 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
   }
   
   const treeData = await treeRes.json();
+
+  // Check for name.fianotes to customize root directory
+  let rootDir = "";
+  const nameFileItem = treeData.tree.find((item: GitHubTreeItem) => item.path === "name.fianotes");
+  
+  if (nameFileItem) {
+    try {
+      const content = await fetchNoteContent(nameFileItem.url);
+      const customRoot = content.trim();
+      // Check if the custom root directory exists in the tree
+      const hasCustomRoot = treeData.tree.some((item: GitHubTreeItem) => 
+        item.path === customRoot || item.path.startsWith(`${customRoot}/`)
+      );
+
+      if (hasCustomRoot) {
+        rootDir = customRoot;
+        console.log(`ℹ️ Found name.fianotes, using custom root directory: ${rootDir}`);
+      }
+    } catch (e) {
+      console.warn("⚠️ Failed to read name.fianotes:", e);
+    }
+  }
+
   // Filter markdown, html and code files
   const allowedExtensions = [
     ".md", ".html", 
@@ -96,9 +119,24 @@ export const fetchNotesTree = async (): Promise<GitHubTreeItem[]> => {
     ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"
   ];
   
-  return treeData.tree.filter((item: GitHubTreeItem) => 
-    item.type === "blob" && allowedExtensions.some(ext => item.path.endsWith(ext))
-  );
+  return treeData.tree
+    .filter((item: GitHubTreeItem) => {
+      // If rootDir is set, only include files inside that directory
+      if (rootDir && !item.path.startsWith(`${rootDir}/`)) {
+        return false;
+      }
+      return item.type === "blob" && allowedExtensions.some(ext => item.path.endsWith(ext));
+    })
+    .map((item: GitHubTreeItem) => {
+      // If rootDir is set, strip it from the path to eliminate "second-level directory"
+      if (rootDir) {
+        return {
+          ...item,
+          path: item.path.substring(rootDir.length + 1)
+        };
+      }
+      return item;
+    });
 };
 
 export const fetchBlobContent = async (url: string): Promise<Blob> => {

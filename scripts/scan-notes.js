@@ -20,7 +20,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configuration
-const CONTENT_DIR = path.join(process.cwd(), "content"); // GitHub Action checks out private repo here
+const NAME_FILE = path.join(process.cwd(), "name.fianotes");
+let contentDirName = "content";
+
+if (fs.existsSync(NAME_FILE)) {
+  try {
+    const content = fs.readFileSync(NAME_FILE, "utf-8").trim();
+    if (content && fs.existsSync(path.join(process.cwd(), content))) {
+      contentDirName = content;
+      console.log(`ℹ️ Found name.fianotes, using custom content directory: ${contentDirName}`);
+    }
+  } catch (e) {
+    console.warn("⚠️ Failed to read name.fianotes:", e);
+  }
+}
+
+const CONTENT_DIR = path.join(process.cwd(), contentDirName); // GitHub Action checks out private repo here
 const OUTPUT_FILE = path.join(process.cwd(), "src", "data", "notes-data.json");
 
 async function buildNotesManifest() {

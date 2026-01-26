@@ -66,6 +66,16 @@ When `VITE_ENABLE_AI_PASSWORD` is true and the password file exists, the AI side
 
 > **Priority**: If `password.fianotes` exists in both the GitHub repository root and the `public/` folder, the one in the GitHub repository root will take precedence.
 
+## Custom Root Directory
+
+You can customize the root directory of your notes by creating a file named `name.fianotes` in the root of your repository.
+
+1.  Create a file named `name.fianotes` in the root directory.
+2.  Inside the file, write the name of the folder you want to use as the root (e.g., `NotesInFia`).
+3.  Ensure a folder with that name exists in the root directory.
+
+If both the `name.fianotes` file and the specified folder exist, the application will treat that folder as the root directory for your notes.
+
 ## Local Development
 
 1. **Clone the repository**
